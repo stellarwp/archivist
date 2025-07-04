@@ -5,6 +5,7 @@ import { ArchivistConfigSchema, defaultConfig } from '../archivist.config';
 import { WebCrawler } from './crawler';
 import { existsSync } from 'fs';
 import path from 'path';
+import { isLegacyConfig, migrateLegacyConfig } from './utils/config-migration';
 
 const program = new Command();
 
@@ -29,7 +30,18 @@ program
       if (existsSync(configPath)) {
         console.log(`Loading config from: ${configPath}`);
         const configFile = await Bun.file(configPath).json();
-        config = ArchivistConfigSchema.parse(configFile);
+        
+        // Check if it's a legacy config and migrate if needed
+        if (isLegacyConfig(configFile)) {
+          const migratedConfig = migrateLegacyConfig(configFile);
+          config = ArchivistConfigSchema.parse(migratedConfig);
+          
+          // Optionally save the migrated config
+          console.log('Note: Your configuration has been automatically migrated to the new format.');
+          console.log('Consider updating your config file to use the new structure.');
+        } else {
+          config = ArchivistConfigSchema.parse(configFile);
+        }
       } else {
         console.log('No config file found, using defaults');
       }
