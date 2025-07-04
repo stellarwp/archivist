@@ -1,8 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import { WebCrawler } from '../../src/crawler';
-import { ArchivistConfig } from '../../archivist.config';
+import type { ArchivistConfig } from '../../archivist.config';
 import { rm, exists } from 'fs/promises';
-import path from 'path';
 
 describe('WebCrawler Integration', () => {
   const testOutputDir = './test-archive';
@@ -63,9 +62,9 @@ describe('WebCrawler Integration', () => {
     const multiSourceConfig: ArchivistConfig = {
       ...testConfig,
       sources: [
-        { url: 'https://example.com/page1' },
-        { url: 'https://example.com/page2' },
-        { url: 'https://example.com/page3' },
+        { url: 'https://example.com/page1', depth: 0 },
+        { url: 'https://example.com/page2', depth: 0 },
+        { url: 'https://example.com/page3', depth: 0 },
       ],
     };
 
