@@ -1,8 +1,8 @@
-import { ArchivistConfig } from '../archivist.config';
+import type { ArchivistConfig } from '../archivist.config';
 import { PureMdClient } from './services/pure-md';
 import { parseMarkdownContent } from './utils/markdown-parser';
+import type { PageContent } from './utils/content-formatter';
 import { 
-  PageContent, 
   formatAsMarkdown, 
   formatAsJson, 
   formatAsHtml 
@@ -39,7 +39,10 @@ export class WebCrawler {
     while (this.queue.size > 0 || activeRequests.length > 0) {
       // Start new requests up to concurrency limit
       while (this.queue.size > 0 && activeRequests.length < concurrencyLimit) {
-        const url = this.queue.values().next().value;
+        const urlIterator = this.queue.values().next();
+        if (urlIterator.done || !urlIterator.value) break;
+        
+        const url = urlIterator.value;
         this.queue.delete(url);
         
         if (!this.visited.has(url)) {

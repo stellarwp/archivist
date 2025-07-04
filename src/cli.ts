@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { Command } from 'commander';
-import { ArchivistConfig, ArchivistConfigSchema, defaultConfig } from '../archivist.config';
+import type { ArchivistConfig } from '../archivist.config';
+import { ArchivistConfigSchema, defaultConfig } from '../archivist.config';
 import { WebCrawler } from './crawler';
 import { existsSync } from 'fs';
 import path from 'path';
