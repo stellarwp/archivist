@@ -1,10 +1,10 @@
 {
   "sources": [
     {
-      "url": "https://docs.anthropic.com/en/docs/intro",
-      "name": "Anthropic Docs",
-      "depth": 2,
-      "selector": "main"
+      "url": "https://example.com",
+      "name": "Example Site",
+      "depth": 1,
+      "selector": ".main-content"
     }
   ],
   "output": {
