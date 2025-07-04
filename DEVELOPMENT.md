@@ -102,12 +102,12 @@ To use Archivist in other projects while developing:
 
 2. **In your project directory**:
    ```bash
-   bun link archivist
+   bun link @stellarwp/archivist
    ```
 
 3. **Use in your project**:
    ```bash
-   bunx archivist crawl --config ./my-config.json
+   archivist crawl --config ./my-config.json
    ```
 
 ### Method 2: Local Installation
@@ -127,6 +127,9 @@ To use Archivist in other projects while developing:
 Install directly from a specific branch or commit:
 
 ```bash
+# From NPM registry
+bun add @stellarwp/archivist
+
 # From main branch
 bun add git+https://github.com/stellarwp/archivist.git
 
@@ -215,7 +218,7 @@ cat > test.config.json << EOF
 EOF
 
 # Run crawler with test config
-bun run archive crawl --config test.config.json
+bun run src/cli.ts crawl --config test.config.json
 ```
 
 ## Testing
