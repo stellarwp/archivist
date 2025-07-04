@@ -1,5 +1,7 @@
 {
   "name": "archivist",
+  "version": "0.1.0",
+  "description": "A Bun-based tool for archiving web content as LLM context using Pure.md API",
   "module": "index.ts",
   "type": "module",
   "private": true,
