@@ -5,7 +5,10 @@
   "private": true,
   "scripts": {
     "archive": "bun run src/cli.ts",
-    "dev": "bun run --watch src/cli.ts"
+    "dev": "bun run --watch src/cli.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage"
   },
   "devDependencies": {
     "@types/bun": "latest",
