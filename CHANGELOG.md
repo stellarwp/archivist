@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-Archive Configuration**
+  - New configuration structure supporting multiple independent archives
+  - Each archive can have its own sources and output settings
+  - Flexible source definitions: single URL string, detailed object, or array
+  - Archives are processed sequentially with isolated crawl state
+  
+- **Backward Compatibility**
+  - Automatic migration from legacy configuration format
+  - Helpful migration messages for users with old configs
+  - Seamless upgrade path without breaking existing setups
+
+### Changed
+
+- Configuration schema restructured from single `sources`/`output` to `archives` array
+- Crawler refactored to support multiple archive processing
+- CLI updated to handle new configuration structure
+- Updated all documentation examples to show new format
+
 ## [0.1.0] - 2025-01-04
 
 ### Added
