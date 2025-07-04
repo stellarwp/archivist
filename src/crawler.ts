@@ -1,8 +1,8 @@
-import * as cheerio from 'cheerio';
 import { ArchivistConfig } from '../archivist.config';
+import { PureMdClient } from './services/pure-md';
+import { parseMarkdownContent } from './utils/markdown-parser';
 import { 
   PageContent, 
-  htmlToMarkdown, 
   formatAsMarkdown, 
   formatAsJson, 
   formatAsHtml 
@@ -18,9 +18,13 @@ export class WebCrawler {
   private queue: Set<string> = new Set();
   private visited: Set<string> = new Set();
   private results: PageContent[] = [];
+  private pureClient: PureMdClient;
 
   constructor(config: ArchivistConfig) {
     this.config = config;
+    this.pureClient = new PureMdClient({
+      apiKey: config.pure.apiKey,
+    });
   }
 
   async crawl(): Promise<PageContent[]> {
@@ -71,30 +75,15 @@ export class WebCrawler {
     }
 
     try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': this.config.crawl.userAgent,
-        },
-        signal: AbortSignal.timeout(this.config.crawl.timeout),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const html = await response.text();
-      const $ = cheerio.load(html);
+      // Use Pure.md to fetch content
+      const markdownContent = await this.pureClient.fetchContent(url);
       
-      // Apply selector if specified
+      // Parse the markdown content
+      const pageContent = parseMarkdownContent(markdownContent, url);
+      
+      // Apply selector filtering if needed (would require additional processing)
       const source = this.config.sources.find(s => s.url === url);
-      if (source?.selector) {
-        const selectedContent = $(source.selector).html();
-        if (selectedContent) {
-          $('body').html(selectedContent);
-        }
-      }
-
-      const pageContent = htmlToMarkdown($, url);
+      
       this.results.push(pageContent);
 
       // Add linked pages to queue if depth allows

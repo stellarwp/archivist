@@ -1,5 +1,3 @@
-import * as cheerio from 'cheerio';
-
 export interface PageContent {
   url: string;
   title: string;
@@ -8,75 +6,6 @@ export interface PageContent {
     crawledAt: string;
     contentLength: number;
     links: string[];
-  };
-}
-
-export function htmlToMarkdown($: cheerio.CheerioAPI, url: string): PageContent {
-  const title = $('title').text() || 'Untitled';
-  
-  // Remove script and style elements
-  $('script, style, noscript').remove();
-  
-  // Extract all links
-  const links: string[] = [];
-  $('a[href]').each((_, el) => {
-    const href = $(el).attr('href');
-    if (href) {
-      try {
-        const absoluteUrl = new URL(href, url).href;
-        links.push(absoluteUrl);
-      } catch {}
-    }
-  });
-  
-  // Convert to text with basic formatting
-  let content = '';
-  
-  // Process headings
-  $('h1, h2, h3, h4, h5, h6').each((_, el) => {
-    const level = parseInt(el.tagName[1]);
-    const text = $(el).text().trim();
-    if (text) {
-      content += '\n' + '#'.repeat(level) + ' ' + text + '\n\n';
-    }
-    $(el).replaceWith('');
-  });
-  
-  // Process paragraphs
-  $('p').each((_, el) => {
-    const text = $(el).text().trim();
-    if (text) {
-      content += text + '\n\n';
-    }
-  });
-  
-  // Process lists
-  $('ul, ol').each((_, list) => {
-    $(list).find('li').each((i, li) => {
-      const text = $(li).text().trim();
-      if (text) {
-        const prefix = list.tagName === 'ol' ? `${i + 1}. ` : '- ';
-        content += prefix + text + '\n';
-      }
-    });
-    content += '\n';
-  });
-  
-  // Add remaining text
-  const remainingText = $('body').text().trim();
-  if (remainingText && !content.includes(remainingText)) {
-    content += '\n' + remainingText;
-  }
-  
-  return {
-    url,
-    title,
-    content: content.trim(),
-    metadata: {
-      crawledAt: new Date().toISOString(),
-      contentLength: content.length,
-      links: [...new Set(links)],
-    },
   };
 }
 

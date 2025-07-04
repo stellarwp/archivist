@@ -1,0 +1,21 @@
+{
+  "sources": [
+    {
+      "url": "https://docs.anthropic.com/en/docs/intro",
+      "name": "Anthropic Docs",
+      "depth": 2,
+      "selector": "main"
+    }
+  ],
+  "output": {
+    "directory": "./archive",
+    "format": "markdown",
+    "fileNaming": "url-based"
+  },
+  "crawl": {
+    "maxConcurrency": 3,
+    "delay": 1000,
+    "userAgent": "Archivist/1.0",
+    "timeout": 30000
+  }
+}
