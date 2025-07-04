@@ -1,0 +1,43 @@
+name: Archive Websites
+
+on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      config_path:
+        description: 'Path to config file'
+        required: false
+        default: './archivist.config.json'
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: bun install
+      
+      - name: Run archiver
+        run: bun run archive crawl --config ${{ github.event.inputs.config_path || './archivist.config.json' }}
+        env:
+          PURE_API_KEY: ${{ secrets.PURE_API_KEY }}
+      
+      - name: Commit and push archives
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add archive/
+          git diff --staged --quiet || git commit -m "chore: Update archives [skip ci]"
+          git push

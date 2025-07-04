@@ -1,0 +1,21 @@
+{
+  "sources": [
+    {
+      "url": "https://example.com",
+      "name": "Example Site",
+      "depth": 1,
+      "selector": ".main-content"
+    }
+  ],
+  "output": {
+    "directory": "./archive",
+    "format": "markdown",
+    "fileNaming": "url-based"
+  },
+  "crawl": {
+    "maxConcurrency": 3,
+    "delay": 1000,
+    "userAgent": "Archivist/1.0",
+    "timeout": 30000
+  }
+}
