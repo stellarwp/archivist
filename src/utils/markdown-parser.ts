@@ -1,9 +1,9 @@
-import { PageContent } from './content-formatter';
+import type { PageContent } from './content-formatter';
 
 export function parseMarkdownContent(markdown: string, url: string): PageContent {
   // Extract title from first H1 or from URL
   const titleMatch = markdown.match(/^#\s+(.+)$/m);
-  const title = titleMatch ? titleMatch[1].trim() : extractTitleFromUrl(url);
+  const title = titleMatch?.[1]?.trim() || extractTitleFromUrl(url);
   
   // Extract all links from markdown
   const links: string[] = [];
@@ -12,14 +12,16 @@ export function parseMarkdownContent(markdown: string, url: string): PageContent
   
   while ((match = linkRegex.exec(markdown)) !== null) {
     const href = match[2];
-    if (href.startsWith('http://') || href.startsWith('https://')) {
-      links.push(href);
-    } else if (!href.startsWith('#') && !href.startsWith('mailto:')) {
-      // Relative link - make it absolute
-      try {
-        const absoluteUrl = new URL(href, url).href;
-        links.push(absoluteUrl);
-      } catch {}
+    if (href) {
+      if (href.startsWith('http://') || href.startsWith('https://')) {
+        links.push(href);
+      } else if (!href.startsWith('#') && !href.startsWith('mailto:')) {
+        // Relative link - make it absolute
+        try {
+          const absoluteUrl = new URL(href, url).href;
+          links.push(absoluteUrl);
+        } catch {}
+      }
     }
   }
 
@@ -51,7 +53,7 @@ function extractTitleFromUrl(url: string): string {
     
     if (pathParts.length > 0) {
       // Get the last meaningful part
-      const lastPart = pathParts[pathParts.length - 1];
+      const lastPart = pathParts[pathParts.length - 1] || '';
       // Remove file extension if present
       const title = lastPart.replace(/\.[^.]+$/, '');
       // Convert kebab-case or snake_case to Title Case
