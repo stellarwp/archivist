@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.2] - 2025-01-05
+
+### Fixed
+
+- **Pure.md API Integration**
+  - Removed URL encoding from API calls that was causing 400 Bad Request errors
+  - Pure.md API expects raw URLs in the path, not URL-encoded ones
+  - Updated tests to match corrected behavior
+
 ### Added
 
 - **Multi-Archive Configuration**
@@ -35,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI updated to handle new configuration structure
 - Updated all documentation examples to show new format
 - Added comprehensive test coverage for new features
+
+## [0.1.0-beta.1] - 2025-01-04
+
+_Initial beta release - see [0.1.0] for full feature list_
 
 ## [0.1.0] - 2025-01-04
 
