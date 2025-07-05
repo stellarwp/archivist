@@ -100,7 +100,7 @@ describe('WebCrawler Integration', () => {
           sources: {
             url: 'https://example.com/api/index',
             depth: 0,
-            followPattern: 'https://example\\.com/api/v1/.*',
+            includePatterns: ['https://example\\.com/api/v1/.*'],
           },
           output: {
             directory: './test-archive/api',
@@ -131,7 +131,7 @@ describe('WebCrawler Integration', () => {
               url: 'https://example.com/links',
               depth: 0,
               linkSelector: '.documentation-links a',
-              followPattern: '.*\\.html$',
+              includePatterns: ['.*\\.html$'],
             },
           ],
           output: {
@@ -184,6 +184,118 @@ describe('WebCrawler Integration', () => {
     };
 
     const crawler = new WebCrawler(multiNamingConfig);
+    expect(crawler).toBeDefined();
+  });
+
+  it('should support includePatterns for link filtering', () => {
+    const patternConfig: ArchivistConfig = {
+      ...testConfig,
+      archives: [
+        {
+          name: 'Pattern Filtered Archive',
+          sources: {
+            url: 'https://example.com',
+            depth: 2,
+            includePatterns: [
+              'https://example\\.com/docs/.*',
+              'https://example\\.com/api/.*'
+            ],
+          },
+          output: {
+            directory: './test-archive/patterns',
+            format: 'markdown',
+            fileNaming: 'url-based',
+          },
+        },
+      ],
+    };
+
+    const crawler = new WebCrawler(patternConfig);
+    expect(crawler).toBeDefined();
+  });
+
+  it('should support excludePatterns for link filtering', () => {
+    const excludeConfig: ArchivistConfig = {
+      ...testConfig,
+      archives: [
+        {
+          name: 'Exclude Pattern Archive',
+          sources: {
+            url: 'https://example.com',
+            depth: 2,
+            excludePatterns: [
+              '.*\\.pdf$',
+              '.*/private/.*',
+              '.*\\?.*'  // Exclude URLs with query parameters
+            ],
+          },
+          output: {
+            directory: './test-archive/exclude',
+            format: 'markdown',
+            fileNaming: 'url-based',
+          },
+        },
+      ],
+    };
+
+    const crawler = new WebCrawler(excludeConfig);
+    expect(crawler).toBeDefined();
+  });
+
+  it('should support combined include and exclude patterns', () => {
+    const combinedConfig: ArchivistConfig = {
+      ...testConfig,
+      archives: [
+        {
+          name: 'Combined Pattern Archive',
+          sources: {
+            url: 'https://example.com/docs',
+            depth: 3,
+            includePatterns: [
+              'https://example\\.com/docs/.*',
+            ],
+            excludePatterns: [
+              '.*/deprecated/.*',
+              '.*\\.(pdf|docx|xlsx)$',
+              '.*/internal/.*'
+            ],
+          },
+          output: {
+            directory: './test-archive/combined',
+            format: 'json',
+            fileNaming: 'hash-based',
+          },
+        },
+      ],
+    };
+
+    const crawler = new WebCrawler(combinedConfig);
+    expect(crawler).toBeDefined();
+  });
+
+  it('should handle link collection with new pattern arrays', () => {
+    const linkCollectionConfig: ArchivistConfig = {
+      ...testConfig,
+      archives: [
+        {
+          name: 'Link Collection with Patterns',
+          sources: {
+            url: 'https://example.com/sitemap',
+            depth: 0,
+            linkSelector: 'a.doc-link',
+            includePatterns: ['https://example\\.com/v2/.*'],
+            excludePatterns: ['.*beta.*', '.*test.*'],
+          },
+          output: {
+            directory: './test-archive/link-patterns',
+            format: 'markdown',
+            fileNaming: 'url-based',
+          },
+        },
+      ],
+    };
+
+    const crawler = new WebCrawler(linkCollectionConfig);
     expect(crawler).toBeDefined();
   });
 });
