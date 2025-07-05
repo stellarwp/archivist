@@ -28,7 +28,7 @@ export class PureMdClient {
 
   async fetchContent(url: string): Promise<string> {
     try {
-      const response = await this.axios.get(`/${encodeURIComponent(url)}`);
+      const response = await this.axios.get(`/${url}`);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -48,7 +48,7 @@ export class PureMdClient {
     }
 
     try {
-      const response = await this.axios.post(`/${encodeURIComponent(url)}`, {
+      const response = await this.axios.post(`/${url}`, {
         prompt: options.prompt || 'Extract the main content and metadata',
         model: options.model || 'meta/llama-3.1-8b',
       });
