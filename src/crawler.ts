@@ -1,5 +1,6 @@
 import type { ArchivistConfig, Archive, Source } from '../archivist.config';
 import { PureMdClient } from './services/pure-md';
+import { ContentScraper } from './services/content-scraper';
 import { parseMarkdownContent } from './utils/markdown-parser';
 import type { PageContent } from './utils/content-formatter';
 import { 
@@ -49,6 +50,7 @@ class ArchiveCrawler {
   private visited: Set<string> = new Set();
   private results: PageContent[] = [];
   private pureClient: PureMdClient;
+  private contentScraper: ContentScraper;
   private sourceMap: Map<string, Source> = new Map();
 
   constructor(
@@ -59,6 +61,10 @@ class ArchiveCrawler {
     this.archive = archive;
     this.crawlConfig = crawlConfig;
     this.pureClient = pureClient;
+    this.contentScraper = new ContentScraper({
+      userAgent: crawlConfig.userAgent,
+      timeout: crawlConfig.timeout,
+    });
   }
 
   async crawl(): Promise<PageContent[]> {
@@ -75,13 +81,14 @@ class ArchiveCrawler {
         this.sourceMap.set(source, source);
       } else {
         // Object source - check if it has link collection settings
-        if (source.linkSelector || source.followPattern) {
+        if (source.linkSelector || source.includePatterns || source.excludePatterns) {
           // This is a link collection page
           console.log(`Collecting links from: ${source.url}`);
           const links = await extractLinksFromPage({
             url: source.url,
             linkSelector: source.linkSelector,
-            followPattern: source.followPattern
+            includePatterns: source.includePatterns,
+            excludePatterns: source.excludePatterns
           });
           
           console.log(`Found ${links.length} links to crawl`);
@@ -149,15 +156,43 @@ class ArchiveCrawler {
       await new Promise(resolve => setTimeout(resolve, this.crawlConfig.delay));
     }
 
+    // Find the source configuration for this URL
+    const source = this.findSourceForUrl(url);
+    let pageContent: PageContent;
+
     try {
-      // Use Pure.md to fetch content
-      const markdownContent = await this.pureClient.fetchContent(url);
-      
-      // Parse the markdown content
-      const pageContent = parseMarkdownContent(markdownContent, url);
-      
-      // Find the source configuration for this URL
-      const source = this.findSourceForUrl(url);
+      // First try Pure.md if we have an API key
+      if (this.pureClient && process.env.PURE_API_KEY) {
+        try {
+          const markdownContent = await this.pureClient.fetchContent(url);
+          pageContent = parseMarkdownContent(markdownContent, url);
+        } catch (pureMdError) {
+          // If Pure.md fails, fall back to Cheerio
+          console.log(`Pure.md failed for ${url}, using Cheerio scraper`);
+          const scraped = await this.contentScraper.scrapeContent(url);
+          pageContent = {
+            url: scraped.url,
+            title: scraped.title,
+            content: scraped.content,
+            metadata: {
+              ...scraped.metadata,
+              links: scraped.links,
+            },
+          };
+        }
+      } else {
+        // No Pure.md API key, use Cheerio directly
+        const scraped = await this.contentScraper.scrapeContent(url);
+        pageContent = {
+          url: scraped.url,
+          title: scraped.title,
+          content: scraped.content,
+          metadata: {
+            ...scraped.metadata,
+            links: scraped.links,
+          },
+        };
+      }
       
       this.results.push(pageContent);
 
@@ -167,7 +202,18 @@ class ArchiveCrawler {
         const sourceUrl = typeof source === 'string' ? source : source.url;
         const currentDepth = this.getDepth(url, sourceUrl);
         if (currentDepth < depth) {
-          for (const link of pageContent.metadata.links) {
+          // Apply include/exclude patterns to discovered links
+          let filteredLinks = pageContent.metadata.links;
+          
+          if (typeof source !== 'string' && (source.includePatterns || source.excludePatterns)) {
+            filteredLinks = this.filterLinks(
+              pageContent.metadata.links, 
+              source.includePatterns,
+              source.excludePatterns
+            );
+          }
+          
+          for (const link of filteredLinks) {
             if (this.isSameDomain(link, url) && !this.visited.has(link)) {
               this.queue.add(link);
               // Inherit source configuration for child pages
@@ -226,6 +272,52 @@ class ArchiveCrawler {
     if (!source) return 0;
     if (typeof source === 'string') return 0;
     return source.depth ?? 0;
+  }
+
+  private filterLinks(
+    links: string[], 
+    includePatterns?: string[], 
+    excludePatterns?: string[]
+  ): string[] {
+    if (!includePatterns && !excludePatterns) {
+      return links;
+    }
+
+    return links.filter(link => {
+      // Check include patterns - if specified, link must match at least one
+      if (includePatterns && includePatterns.length > 0) {
+        const matchesInclude = includePatterns.some(pattern => {
+          try {
+            return new RegExp(pattern).test(link);
+          } catch (e) {
+            console.warn(`Invalid include pattern: ${pattern}`);
+            return false;
+          }
+        });
+        
+        if (!matchesInclude) {
+          return false;
+        }
+      }
+      
+      // Check exclude patterns - link must not match any
+      if (excludePatterns && excludePatterns.length > 0) {
+        const matchesExclude = excludePatterns.some(pattern => {
+          try {
+            return new RegExp(pattern).test(link);
+          } catch (e) {
+            console.warn(`Invalid exclude pattern: ${pattern}`);
+            return false;
+          }
+        });
+        
+        if (matchesExclude) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
   }
 
   async save(): Promise<void> {

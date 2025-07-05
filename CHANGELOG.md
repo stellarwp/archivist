@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.3] - 2025-01-05
+
+### Added
+
+- **Cheerio-based Content Scraper**
+  - Fallback scraper for unknown URLs when Pure.md is unavailable
+  - Automatic fallback when Pure.md API fails or returns errors
+  - Extracts title, content, and links from any webpage
+  - Converts HTML content to clean markdown format
+  - Preserves document structure (headings, lists, quotes, code blocks)
+  
+- **Enhanced Link Filtering**
+  - Replaced single `followPattern` with `includePatterns` and `excludePatterns` arrays
+  - Support for multiple include patterns (link must match at least one)
+  - Support for multiple exclude patterns (link must not match any)
+  - Patterns can be combined for sophisticated filtering logic
+  - Applied during both link collection and crawling phases
+
+### Changed
+
+- **Source Configuration**
+  - `followPattern` property replaced with `includePatterns` array
+  - Added `excludePatterns` array for negative filtering
+  - Both pattern arrays accept regular expressions as strings
+  - Pattern filtering now supports more complex URL matching scenarios
+
+- **Crawler Behavior**
+  - Crawler now attempts Pure.md first, falls back to Cheerio on failure
+  - No Pure.md API key required for basic operation
+  - Improved error handling with graceful degradation
+  - Better support for sites not recognized by Pure.md
+
+### Fixed
+
+- Fixed `filterLinks` method implementation in ArchiveCrawler
+- Updated tests to use new pattern array syntax
+- Improved error messages for invalid regex patterns
+
 ## [0.1.0-beta.2] - 2025-01-05
 
 ### Fixed
