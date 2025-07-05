@@ -76,10 +76,10 @@ describe('link-extractor', () => {
       expect(links).toContain('https://example.com/api/comments');
     });
 
-    it('should filter links based on followPattern', async () => {
+    it('should filter links based on includePatterns', async () => {
       const links = await extractLinksFromPage({
         url: 'https://example.com/index',
-        followPattern: 'https://example\\.com/api/.*',
+        includePatterns: ['https://example\\.com/api/.*'],
       });
 
       expect(links).toContain('https://example.com/api/users');
@@ -91,10 +91,10 @@ describe('link-extractor', () => {
       expect(links).not.toContain('https://external.com/resource');
     });
 
-    it('should filter links with complex patterns', async () => {
+    it('should filter links with includePatterns', async () => {
       const links = await extractLinksFromPage({
         url: 'https://example.com/blog',
-        followPattern: '.*\\.html$',
+        includePatterns: ['.*\\.html$'],
       });
 
       expect(links).toContain('https://example.com/blog/post-1.html');
@@ -103,6 +103,36 @@ describe('link-extractor', () => {
       
       // Should not contain non-HTML links
       expect(links).not.toContain('https://example.com/about');
+    });
+
+    it('should filter links with excludePatterns', async () => {
+      const links = await extractLinksFromPage({
+        url: 'https://example.com/blog',
+        excludePatterns: ['.*draft.*'],
+      });
+
+      expect(links).toContain('https://example.com/blog/post-1.html');
+      expect(links).toContain('https://example.com/blog/post-2.html');
+      expect(links).toContain('https://example.com/about');
+      
+      // Should not contain draft links
+      expect(links).not.toContain('https://example.com/blog/draft.html');
+    });
+
+    it('should support both includePatterns and excludePatterns', async () => {
+      const links = await extractLinksFromPage({
+        url: 'https://example.com/index',
+        includePatterns: ['https://example\\.com/.*'],
+        excludePatterns: ['.*guides.*'],
+      });
+
+      expect(links).toContain('https://example.com/api/users');
+      expect(links).toContain('https://example.com/api/posts');
+      expect(links).toContain('https://example.com/api/comments');
+      
+      // Should not contain guides or external links
+      expect(links).not.toContain('https://example.com/guides/intro');
+      expect(links).not.toContain('https://external.com/resource');
     });
 
     it('should remove duplicate links', async () => {
