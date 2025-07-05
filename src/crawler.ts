@@ -1,6 +1,6 @@
 import type { ArchivistConfig, Archive, Source } from '../archivist.config';
 import { PureMdClient } from './services/pure-md';
-import { ContentScraper } from './services/content-scraper';
+import { LinkDiscoverer } from './services/link-discoverer';
 import { parseMarkdownContent } from './utils/markdown-parser';
 import type { PageContent } from './utils/content-formatter';
 import { 
@@ -50,7 +50,7 @@ class ArchiveCrawler {
   private visited: Set<string> = new Set();
   private results: PageContent[] = [];
   private pureClient: PureMdClient;
-  private contentScraper: ContentScraper;
+  private linkDiscoverer: LinkDiscoverer;
   private sourceMap: Map<string, Source> = new Map();
 
   constructor(
@@ -61,7 +61,7 @@ class ArchiveCrawler {
     this.archive = archive;
     this.crawlConfig = crawlConfig;
     this.pureClient = pureClient;
-    this.contentScraper = new ContentScraper({
+    this.linkDiscoverer = new LinkDiscoverer({
       userAgent: crawlConfig.userAgent,
       timeout: crawlConfig.timeout,
     });
@@ -161,35 +161,41 @@ class ArchiveCrawler {
     let pageContent: PageContent;
 
     try {
-      // First try Pure.md if we have an API key
+      // Try to get content with Pure.md
       if (this.pureClient && process.env.PURE_API_KEY) {
         try {
           const markdownContent = await this.pureClient.fetchContent(url);
           pageContent = parseMarkdownContent(markdownContent, url);
         } catch (pureMdError) {
-          // If Pure.md fails, fall back to Cheerio
-          console.log(`Pure.md failed for ${url}, using Cheerio scraper`);
-          const scraped = await this.contentScraper.scrapeContent(url);
+          // If Pure.md fails, just discover links with Cheerio
+          console.log(`Pure.md failed for ${url}, discovering links only`);
+          const discovered = await this.linkDiscoverer.discoverLinks(url);
+          
+          // Create minimal page content with discovered links
           pageContent = {
-            url: scraped.url,
-            title: scraped.title,
-            content: scraped.content,
+            url: discovered.url,
+            title: `Page at ${url}`,
+            content: `[Content not available - Pure.md extraction failed]`,
             metadata: {
-              ...scraped.metadata,
-              links: scraped.links,
+              crawledAt: discovered.crawledAt,
+              contentLength: 0,
+              links: discovered.links,
             },
           };
         }
       } else {
-        // No Pure.md API key, use Cheerio directly
-        const scraped = await this.contentScraper.scrapeContent(url);
+        // No Pure.md API key, just discover links
+        console.log(`No Pure.md API key, discovering links only for ${url}`);
+        const discovered = await this.linkDiscoverer.discoverLinks(url);
+        
         pageContent = {
-          url: scraped.url,
-          title: scraped.title,
-          content: scraped.content,
+          url: discovered.url,
+          title: `Page at ${url}`,
+          content: `[Content not available - Pure.md API key required]`,
           metadata: {
-            ...scraped.metadata,
-            links: scraped.links,
+            crawledAt: discovered.crawledAt,
+            contentLength: 0,
+            links: discovered.links,
           },
         };
       }

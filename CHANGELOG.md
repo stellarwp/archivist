@@ -11,12 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Cheerio-based Content Scraper**
-  - Fallback scraper for unknown URLs when Pure.md is unavailable
-  - Automatic fallback when Pure.md API fails or returns errors
-  - Extracts title, content, and links from any webpage
-  - Converts HTML content to clean markdown format
-  - Preserves document structure (headings, lists, quotes, code blocks)
+- **Cheerio-based Link Discovery**
+  - Link discoverer for finding all links on a page when Pure.md is unavailable
+  - Used for pagination and discovering crawlable URLs
+  - Extracts and normalizes all links from HTML pages
+  - Pure.md remains the only tool for content extraction
+  - When Pure.md fails, pages are marked with placeholder content
   
 - **Enhanced Link Filtering**
   - Replaced single `followPattern` with `includePatterns` and `excludePatterns` arrays
@@ -34,10 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pattern filtering now supports more complex URL matching scenarios
 
 - **Crawler Behavior**
-  - Crawler now attempts Pure.md first, falls back to Cheerio on failure
-  - No Pure.md API key required for basic operation
-  - Improved error handling with graceful degradation
-  - Better support for sites not recognized by Pure.md
+  - Pure.md is the exclusive content extractor
+  - Cheerio is used only for link discovery when Pure.md fails
+  - Without Pure.md API key, only links are discovered (no content extraction)
+  - Pages without successful Pure.md extraction show placeholder content
+  - Improved separation of concerns: content extraction vs link discovery
 
 ### Fixed
 

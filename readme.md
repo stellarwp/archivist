@@ -399,15 +399,15 @@ This tool uses [Pure.md](https://pure.md) API for clean content extraction when 
 - Clean markdown output
 - Better handling of dynamic content
 
-### Cheerio Fallback (v0.1.0-beta.3+)
+### Link Discovery Fallback (v0.1.0-beta.3+)
 
-When Pure.md is unavailable or fails, Archivist automatically falls back to Cheerio-based scraping:
+When Pure.md is unavailable or fails, Archivist uses Cheerio for link discovery only:
 
-- Works with any website without API key
-- Extracts title, content, and links
-- Converts HTML to clean markdown
-- Smart content detection using common selectors
-- Preserves document structure (headings, lists, code blocks)
+- Discovers all links on a page for crawling
+- Useful for pagination and finding all content pages
+- No content extraction - Pure.md remains the only content extractor
+- Pages without successful Pure.md extraction show placeholder content
+- Ensures comprehensive crawling even when content extraction fails
 
 ### Getting an API Key
 
