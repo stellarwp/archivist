@@ -33,10 +33,23 @@ export function isLegacyConfig(config: any): config is LegacyConfig {
 export function migrateLegacyConfig(legacy: LegacyConfig): ArchivistConfig {
   console.log('Migrating legacy configuration format to new format...');
   
+  // Map legacy sources to new format
+  const mappedSources = legacy.sources.map(source => {
+    const { selector, depth, ...rest } = source;
+    const newSource: any = {
+      ...rest,
+      depth: depth ?? 0, // Provide default depth if not specified
+    };
+    if (selector) {
+      newSource.linkSelector = selector;
+    }
+    return newSource;
+  });
+  
   return {
     archives: [{
       name: 'Default Archive',
-      sources: legacy.sources,
+      sources: mappedSources,
       output: legacy.output,
     }],
     crawl: legacy.crawl,

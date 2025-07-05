@@ -88,11 +88,16 @@ describe('config-migration', () => {
       const migrated = migrateLegacyConfig(legacyConfig);
 
       expect(migrated.archives).toHaveLength(1);
-      expect(migrated.archives[0]).toEqual({
-        name: 'Default Archive',
-        sources: legacyConfig.sources,
-        output: legacyConfig.output,
-      });
+      expect(migrated.archives[0]?.name).toBe('Default Archive');
+      expect(migrated.archives[0]?.output).toEqual(legacyConfig.output);
+      // Check that sources are properly mapped with depth preserved
+      expect(migrated.archives[0]?.sources).toEqual([
+        {
+          url: 'https://example.com',
+          name: 'Example',
+          depth: 1,
+        },
+      ]);
       expect(migrated.crawl).toEqual(legacyConfig.crawl);
       expect(migrated.pure).toEqual(legacyConfig.pure);
     });
@@ -155,7 +160,54 @@ describe('config-migration', () => {
 
       const migrated = migrateLegacyConfig(legacyConfig);
 
-      expect(migrated.archives[0].sources).toEqual(legacyConfig.sources);
+      // Sources should be preserved with depth values
+      expect(migrated.archives[0]?.sources).toEqual([
+        {
+          url: 'https://example.com/docs',
+          name: 'Documentation',
+          depth: 2,
+        },
+        {
+          url: 'https://example.com/api',
+          name: 'API Reference',
+          depth: 1,
+        },
+      ]);
+    });
+
+    it('should migrate selector to linkSelector in sources', () => {
+      const legacyConfig = {
+        sources: [
+          {
+            url: 'https://example.com',
+            name: 'Example',
+            depth: 1,
+            selector: '.content a',
+          },
+        ],
+        output: {
+          directory: './archive',
+          format: 'markdown' as const,
+          fileNaming: 'url-based' as const,
+        },
+        crawl: {
+          maxConcurrency: 3,
+          delay: 1000,
+          userAgent: 'Archivist/1.0',
+          timeout: 30000,
+        },
+      };
+
+      const migrated = migrateLegacyConfig(legacyConfig);
+
+      expect(migrated.archives[0]?.sources).toEqual([
+        {
+          url: 'https://example.com',
+          name: 'Example',
+          depth: 1,
+          linkSelector: '.content a',
+        },
+      ]);
     });
   });
 });

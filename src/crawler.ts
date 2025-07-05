@@ -163,7 +163,7 @@ class ArchiveCrawler {
 
       // Add linked pages to queue if depth allows
       const depth = this.getSourceDepth(source);
-      if (depth > 0) {
+      if (depth > 0 && source) {
         const sourceUrl = typeof source === 'string' ? source : source.url;
         const currentDepth = this.getDepth(url, sourceUrl);
         if (currentDepth < depth) {
