@@ -66,8 +66,7 @@ bun install
         {
           "url": "https://example.com",
           "name": "Example Site",
-          "depth": 1,
-          "selector": ".main-content"
+          "depth": 1
         }
       ],
       "output": {
@@ -104,7 +103,7 @@ Sources can be:
   - **url** - Starting URL to crawl or collect links from
   - **name** - Optional friendly name for the source
   - **depth** - How many levels deep to crawl (0 = don't crawl the source page itself)
-  - **linkSelector** - CSS selector to find links to crawl (simplified support)
+  - **linkSelector** - CSS selector to find links to crawl (simplified support, primarily for link collection)
   - **followPattern** - Regex pattern to filter which links to follow
 
 #### Output
@@ -194,8 +193,7 @@ For more complete examples, check out the [examples directory](./examples/).
       "sources": [
         {
           "url": "https://docs.example.com/api",
-          "depth": 2,
-          "selector": ".content"
+          "depth": 2
         },
         {
           "url": "https://docs.example.com/guides",

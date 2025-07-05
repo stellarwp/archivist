@@ -30,7 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Configuration schema restructured from single `sources`/`output` to `archives` array
 - Crawler refactored to support multiple archive processing
-- Source object `selector` option replaced with `linkSelector` and `followPattern`
+- Source object `selector` option (if used) renamed to `linkSelector` for clarity
+- Added `followPattern` option for regex-based link filtering
 - CLI updated to handle new configuration structure
 - Updated all documentation examples to show new format
 - Added comprehensive test coverage for new features

@@ -213,13 +213,20 @@ Create a test configuration:
 # Create test config
 cat > test.config.json << EOF
 {
-  "sources": [{
-    "url": "https://example.com",
-    "depth": 0
+  "archives": [{
+    "name": "Test Archive",
+    "sources": [{
+      "url": "https://example.com",
+      "depth": 0
+    }],
+    "output": {
+      "directory": "./test-output",
+      "format": "markdown"
+    }
   }],
-  "output": {
-    "directory": "./test-output",
-    "format": "markdown"
+  "crawl": {
+    "maxConcurrency": 1,
+    "delay": 1000
   }
 }
 EOF
