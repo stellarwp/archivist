@@ -122,6 +122,8 @@ Sources can be:
 
 ## Usage Examples
 
+For more complete examples, check out the [examples directory](./examples/).
+
 ### Single Archive with Multiple Sources
 
 ```json

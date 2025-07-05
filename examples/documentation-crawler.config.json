@@ -1,0 +1,41 @@
+{
+  "archives": [
+    {
+      "name": "API Documentation",
+      "sources": [
+        {
+          "url": "https://api.example.com/docs",
+          "depth": 2,
+          "selector": ".api-content"
+        }
+      ],
+      "output": {
+        "directory": "./archive/api-docs",
+        "format": "markdown",
+        "fileNaming": "url-based"
+      }
+    },
+    {
+      "name": "User Guides",
+      "sources": [
+        "https://help.example.com/getting-started",
+        "https://help.example.com/advanced-features",
+        "https://help.example.com/troubleshooting"
+      ],
+      "output": {
+        "directory": "./archive/user-guides",
+        "format": "html",
+        "fileNaming": "title-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 3,
+    "delay": 2000,
+    "userAgent": "Archivist Documentation Crawler/1.0",
+    "timeout": 45000
+  },
+  "pure": {
+    "apiKey": "your-pure-md-api-key-here"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "archives": [
+    {
+      "name": "My Blog",
+      "sources": "https://myblog.example.com",
+      "output": {
+        "directory": "./archive/blog",
+        "format": "markdown",
+        "fileNaming": "title-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 1,
+    "delay": 1000
+  }
+}
