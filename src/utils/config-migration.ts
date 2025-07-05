@@ -24,7 +24,10 @@ interface LegacyConfig {
 }
 
 export function isLegacyConfig(config: any): config is LegacyConfig {
-  return config.sources && config.output && !config.archives;
+  if (!config || typeof config !== 'object') {
+    return false;
+  }
+  return !!(config.sources && config.output && !config.archives);
 }
 
 export function migrateLegacyConfig(legacy: LegacyConfig): ArchivistConfig {

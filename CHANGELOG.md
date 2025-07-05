@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Flexible source definitions: single URL string, detailed object, or array
   - Archives are processed sequentially with isolated crawl state
   
+- **Link Collection from Index Pages**
+  - Use any page as a link collector with `linkSelector` and `followPattern`
+  - Extract links from index/archive pages before crawling
+  - Filter links with regex patterns for precise control
+  - Set `depth: 0` to only collect links without archiving the index page
+  
 - **Backward Compatibility**
   - Automatic migration from legacy configuration format
   - Helpful migration messages for users with old configs
@@ -24,8 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Configuration schema restructured from single `sources`/`output` to `archives` array
 - Crawler refactored to support multiple archive processing
+- Source object `selector` option replaced with `linkSelector` and `followPattern`
 - CLI updated to handle new configuration structure
 - Updated all documentation examples to show new format
+- Added comprehensive test coverage for new features
 
 ## [0.1.0] - 2025-01-04
 

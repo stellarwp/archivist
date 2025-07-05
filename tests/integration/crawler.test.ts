@@ -7,18 +7,23 @@ describe('WebCrawler Integration', () => {
   const testOutputDir = './test-archive';
   
   const testConfig: ArchivistConfig = {
-    sources: [
+    archives: [
       {
-        url: 'https://example.com',
-        name: 'Example Test',
-        depth: 0,
+        name: 'Test Archive',
+        sources: [
+          {
+            url: 'https://example.com',
+            name: 'Example Test',
+            depth: 0,
+          },
+        ],
+        output: {
+          directory: testOutputDir,
+          format: 'markdown',
+          fileNaming: 'url-based',
+        },
       },
     ],
-    output: {
-      directory: testOutputDir,
-      format: 'markdown',
-      fileNaming: 'url-based',
-    },
     crawl: {
       maxConcurrency: 1,
       delay: 100,
@@ -48,8 +53,7 @@ describe('WebCrawler Integration', () => {
     // This will fail without a real Pure.md API key, so we'll skip for now
     // In a real test, you'd mock the PureMdClient
     try {
-      await crawler.crawl();
-      await crawler.save();
+      await crawler.crawlAll();
       
       expect(await exists(testOutputDir)).toBe(true);
     } catch (error) {
@@ -58,67 +62,128 @@ describe('WebCrawler Integration', () => {
     }
   });
 
-  it('should handle multiple sources', () => {
-    const multiSourceConfig: ArchivistConfig = {
+  it('should handle multiple archives', () => {
+    const multiArchiveConfig: ArchivistConfig = {
       ...testConfig,
-      sources: [
-        { url: 'https://example.com/page1', depth: 0 },
-        { url: 'https://example.com/page2', depth: 0 },
-        { url: 'https://example.com/page3', depth: 0 },
-      ],
-    };
-
-    const crawler = new WebCrawler(multiSourceConfig);
-    // Test initialization - actual crawling would require mocking
-    expect(crawler).toBeDefined();
-  });
-
-  it('should respect depth configuration', () => {
-    const depthConfig: ArchivistConfig = {
-      ...testConfig,
-      sources: [
+      archives: [
         {
-          url: 'https://example.com',
-          depth: 2,
+          name: 'Documentation',
+          sources: 'https://example.com/docs',
+          output: {
+            directory: './test-archive/docs',
+            format: 'markdown',
+            fileNaming: 'url-based',
+          },
+        },
+        {
+          name: 'Blog',
+          sources: ['https://example.com/blog/post1', 'https://example.com/blog/post2'],
+          output: {
+            directory: './test-archive/blog',
+            format: 'json',
+            fileNaming: 'title-based',
+          },
         },
       ],
     };
 
-    const crawler = new WebCrawler(depthConfig);
+    const crawler = new WebCrawler(multiArchiveConfig);
     expect(crawler).toBeDefined();
   });
 
-  it('should support different output formats', () => {
+  it('should handle link collection sources', () => {
+    const linkCollectionConfig: ArchivistConfig = {
+      ...testConfig,
+      archives: [
+        {
+          name: 'API Docs',
+          sources: {
+            url: 'https://example.com/api/index',
+            depth: 0,
+            followPattern: 'https://example\\.com/api/v1/.*',
+          },
+          output: {
+            directory: './test-archive/api',
+            format: 'markdown',
+            fileNaming: 'url-based',
+          },
+        },
+      ],
+    };
+
+    const crawler = new WebCrawler(linkCollectionConfig);
+    expect(crawler).toBeDefined();
+  });
+
+  it('should support mixed source types', () => {
+    const mixedSourceConfig: ArchivistConfig = {
+      ...testConfig,
+      archives: [
+        {
+          name: 'Mixed Sources',
+          sources: [
+            'https://example.com/simple',
+            {
+              url: 'https://example.com/complex',
+              depth: 2,
+            },
+            {
+              url: 'https://example.com/links',
+              depth: 0,
+              linkSelector: '.documentation-links a',
+              followPattern: '.*\\.html$',
+            },
+          ],
+          output: {
+            directory: './test-archive/mixed',
+            format: 'markdown',
+            fileNaming: 'url-based',
+          },
+        },
+      ],
+    };
+
+    const crawler = new WebCrawler(mixedSourceConfig);
+    expect(crawler).toBeDefined();
+  });
+
+  it('should support different output formats per archive', () => {
     const formats = ['markdown', 'json', 'html'] as const;
     
-    formats.forEach(format => {
-      const formatConfig: ArchivistConfig = {
-        ...testConfig,
+    const multiFormatConfig: ArchivistConfig = {
+      ...testConfig,
+      archives: formats.map((format, index) => ({
+        name: `${format} Archive`,
+        sources: `https://example.com/test${index}`,
         output: {
-          ...testConfig.output,
+          directory: `./test-archive/${format}`,
           format,
+          fileNaming: 'url-based',
         },
-      };
+      })),
+    };
 
-      const crawler = new WebCrawler(formatConfig);
-      expect(crawler).toBeDefined();
-    });
+    const crawler = new WebCrawler(multiFormatConfig);
+    expect(crawler).toBeDefined();
   });
 
   it('should support different file naming strategies', () => {
     const strategies = ['url-based', 'title-based', 'hash-based'] as const;
     
-    strategies.forEach(fileNaming => {
-      const namingConfig: ArchivistConfig = {
-        ...testConfig,
+    const multiNamingConfig: ArchivistConfig = {
+      ...testConfig,
+      archives: strategies.map((fileNaming, index) => ({
+        name: `${fileNaming} Archive`,
+        sources: `https://example.com/test${index}`,
         output: {
-          ...testConfig.output,
+          directory: `./test-archive/${fileNaming}`,
+          format: 'markdown',
           fileNaming,
         },
-      };
+      })),
+    };
 
-      const crawler = new WebCrawler(namingConfig);
-      expect(crawler).toBeDefined();
-    });
+    const crawler = new WebCrawler(multiNamingConfig);
+    expect(crawler).toBeDefined();
   });
 });

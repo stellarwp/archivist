@@ -28,6 +28,23 @@ export async function extractLinksFromPage(options: LinkExtractionOptions): Prom
     while ((match = hrefRegex.exec(html)) !== null) {
       const href = match[1];
       
+      // Skip empty hrefs
+      if (!href || href === '') {
+        continue;
+      }
+      
+      // Skip javascript:, mailto:, and anchor links
+      if (href.startsWith('javascript:') || 
+          href.startsWith('mailto:') || 
+          href.startsWith('#')) {
+        continue;
+      }
+      
+      // Skip malformed URLs that start with :// or other invalid patterns
+      if (href.startsWith('://') || href.startsWith('//')) {
+        continue;
+      }
+      
       // Convert relative URLs to absolute
       try {
         const absoluteUrl = new URL(href, url).toString();
@@ -40,7 +57,7 @@ export async function extractLinksFromPage(options: LinkExtractionOptions): Prom
           }
         }
         
-        // Skip anchors, mailto, and non-http(s) links
+        // Skip non-http(s) links
         if (absoluteUrl.startsWith('http://') || absoluteUrl.startsWith('https://')) {
           links.push(absoluteUrl);
         }

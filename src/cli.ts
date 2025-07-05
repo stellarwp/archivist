@@ -93,8 +93,7 @@ program
             {
               url: 'https://example.com/docs',
               name: 'Main Docs',
-              depth: 2,
-              selector: '.main-content'
+              depth: 2
             }
           ],
           output: {

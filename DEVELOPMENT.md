@@ -146,18 +146,25 @@ bun add git+https://github.com/YOUR_USERNAME/archivist.git#your-branch
 archivist/
 ├── src/
 │   ├── cli.ts              # CLI entry point
-│   ├── crawler.ts          # Main crawler logic
+│   ├── crawler.ts          # Main crawler logic with multi-archive support
 │   ├── services/
 │   │   └── pure-md.ts      # Pure.md API client
 │   └── utils/
+│       ├── config-migration.ts   # Legacy config migration
 │       ├── content-formatter.ts  # Output formatting
 │       ├── file-naming.ts       # File naming strategies
+│       ├── link-extractor.ts    # Link extraction for index pages
 │       └── markdown-parser.ts   # Markdown parsing
 ├── tests/
 │   ├── unit/               # Unit tests
 │   │   ├── services/       # Service tests
 │   │   └── utils/          # Utility tests
 │   └── integration/        # Integration tests
+├── examples/               # Example configurations
+│   ├── simple-single-archive.config.json
+│   ├── multi-archive.config.json
+│   ├── documentation-crawler.config.json
+│   └── link-collection.config.json
 ├── .github/
 │   └── workflows/          # GitHub Actions
 ├── archivist.config.ts     # Configuration schema
