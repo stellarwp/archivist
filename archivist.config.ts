@@ -7,7 +7,8 @@ const SourceSchema = z.union([
     url: z.string().url(),
     name: z.string().optional(),
     depth: z.number().min(0).max(3).default(0),
-    selector: z.string().optional(),
+    linkSelector: z.string().optional().describe('CSS selector to find links to crawl'),
+    followPattern: z.string().optional().describe('Regex pattern to filter which links to follow'),
   })
 ]);
 

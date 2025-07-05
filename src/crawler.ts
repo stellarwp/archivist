@@ -12,6 +12,7 @@ import {
   titleToFilename, 
   hashFilename 
 } from './utils/file-naming';
+import { extractLinksFromPage } from './utils/link-extractor';
 
 export class WebCrawler {
   private config: ArchivistConfig;
@@ -66,11 +67,42 @@ class ArchiveCrawler {
       ? this.archive.sources 
       : [this.archive.sources];
     
+    // Process sources - some might be link collection pages
     for (const source of sources) {
-      const url = typeof source === 'string' ? source : source.url;
-      this.queue.add(url);
-      // Store source configuration for later reference
-      this.sourceMap.set(url, source);
+      if (typeof source === 'string') {
+        // Simple URL - add directly to queue
+        this.queue.add(source);
+        this.sourceMap.set(source, source);
+      } else {
+        // Object source - check if it has link collection settings
+        if (source.linkSelector || source.followPattern) {
+          // This is a link collection page
+          console.log(`Collecting links from: ${source.url}`);
+          const links = await extractLinksFromPage({
+            url: source.url,
+            linkSelector: source.linkSelector,
+            followPattern: source.followPattern
+          });
+          
+          console.log(`Found ${links.length} links to crawl`);
+          
+          // Add collected links to queue
+          for (const link of links) {
+            this.queue.add(link);
+            // Store the source configuration for these links
+            this.sourceMap.set(link, source);
+          }
+          
+          // If depth is 0, we don't crawl the collection page itself
+          if (source.depth === 0) {
+            continue;
+          }
+        }
+        
+        // Add the source URL itself to queue (unless it was just for link collection)
+        this.queue.add(source.url);
+        this.sourceMap.set(source.url, source);
+      }
     }
 
     const concurrencyLimit = this.crawlConfig.maxConcurrency;

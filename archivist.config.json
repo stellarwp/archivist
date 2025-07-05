@@ -6,8 +6,7 @@
         {
           "url": "https://example.com",
           "name": "Example Site",
-          "depth": 1,
-          "selector": ".main-content"
+          "depth": 1
         }
       ],
       "output": {

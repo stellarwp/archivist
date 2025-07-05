@@ -5,8 +5,7 @@
       "sources": [
         {
           "url": "https://api.example.com/docs",
-          "depth": 2,
-          "selector": ".api-content"
+          "depth": 2
         }
       ],
       "output": {

@@ -19,9 +19,16 @@ A more complex example showing:
 - Multiple archives for different documentation types
 - Depth-based crawling for API docs
 - Multiple source URLs for user guides
-- Custom selectors for content extraction
 
 **Use case:** Comprehensive documentation archiving with different strategies per section.
+
+### 4. Link Collection (`link-collection.config.json`)
+Demonstrates using source pages as link collectors:
+- Using `followPattern` to filter which links to crawl
+- Setting `depth: 0` to skip crawling the index page itself
+- Collecting links from multiple index pages
+
+**Use case:** When you have index or archive pages that list all the content you want to crawl.
 
 
 ## Usage

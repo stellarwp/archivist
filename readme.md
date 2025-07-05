@@ -101,10 +101,11 @@ Each archive in the `archives` array has:
 Sources can be:
 - A simple URL string: `"https://example.com"`
 - An object with options:
-  - **url** - Starting URL to crawl
+  - **url** - Starting URL to crawl or collect links from
   - **name** - Optional friendly name for the source
-  - **depth** - How many levels deep to crawl (0 = single page)
-  - **selector** - Optional CSS selector for content extraction
+  - **depth** - How many levels deep to crawl (0 = don't crawl the source page itself)
+  - **linkSelector** - CSS selector to find links to crawl (simplified support)
+  - **followPattern** - Regex pattern to filter which links to follow
 
 #### Output
 - **directory** - Where to save archived files
@@ -232,30 +233,34 @@ For more complete examples, check out the [examples directory](./examples/).
 }
 ```
 
-### Legacy Configuration Support
+### Link Collection Example
 
-The tool still supports the legacy configuration format and will automatically migrate it to the new format:
-
-```json
-{
-  "sources": [...],
-  "output": {...},
-  "crawl": {...}
-}
-```
-
-Will be automatically converted to:
+Use a page as a link collector to crawl all documentation pages:
 
 ```json
 {
-  "archives": [{
-    "name": "Default Archive",
-    "sources": [...],
-    "output": {...}
-  }],
-  "crawl": {...}
+  "archives": [
+    {
+      "name": "API Reference",
+      "sources": {
+        "url": "https://docs.example.com/api/index",
+        "depth": 0,
+        "followPattern": "https://docs\\.example\\.com/api/v1/.*"
+      },
+      "output": {
+        "directory": "./archive/api-reference",
+        "format": "markdown"
+      }
+    }
+  ]
 }
 ```
+
+In this example:
+- The index page at `/api/index` is used only to collect links
+- `depth: 0` means the index page itself won't be archived
+- Only links matching the `followPattern` regex will be crawled
+- All matched links will be crawled and archived
 
 ## CLI Reference
 
