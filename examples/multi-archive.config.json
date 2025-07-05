@@ -1,0 +1,37 @@
+{
+  "archives": [
+    {
+      "name": "Bun Documentation",
+      "sources": [
+        "https://bun.sh/docs",
+        "https://bun.sh/docs/installation"
+      ],
+      "output": {
+        "directory": "./archive/bun-docs",
+        "format": "markdown",
+        "fileNaming": "url-based"
+      }
+    },
+    {
+      "name": "TypeScript Handbook",
+      "sources": {
+        "url": "https://www.typescriptlang.org/docs/handbook/intro.html",
+        "depth": 1
+      },
+      "output": {
+        "directory": "./archive/typescript-handbook",
+        "format": "markdown",
+        "fileNaming": "title-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 2,
+    "delay": 2000,
+    "userAgent": "Archivist/1.0",
+    "timeout": 30000
+  },
+  "pure": {
+    "apiKey": ""
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "archives": [
+    {
+      "name": "Documentation from Index Page",
+      "sources": {
+        "url": "https://docs.example.com/index",
+        "depth": 0,
+        "followPattern": "https://docs\\.example\\.com/reference/.*",
+        "name": "Documentation Index"
+      },
+      "output": {
+        "directory": "./archive/docs-reference",
+        "format": "markdown",
+        "fileNaming": "url-based"
+      }
+    },
+    {
+      "name": "Blog Posts Collection",
+      "sources": [
+        {
+          "url": "https://blog.example.com/archive/2024",
+          "depth": 0,
+          "followPattern": "https://blog\\.example\\.com/posts/.*",
+          "name": "2024 Archive Page"
+        },
+        {
+          "url": "https://blog.example.com/featured",
+          "depth": 0,
+          "followPattern": "https://blog\\.example\\.com/posts/.*",
+          "name": "Featured Posts Page"
+        }
+      ],
+      "output": {
+        "directory": "./archive/blog-posts",
+        "format": "json",
+        "fileNaming": "title-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 3,
+    "delay": 1500,
+    "userAgent": "Archivist/1.0",
+    "timeout": 30000
+  },
+  "pure": {
+    "apiKey": "your-api-key-here"
+  }
+}

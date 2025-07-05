@@ -59,19 +59,24 @@ bun install
 
 ```json
 {
-  "sources": [
+  "archives": [
     {
-      "url": "https://example.com",
-      "name": "Example Site",
-      "depth": 1,
-      "selector": ".main-content"
+      "name": "Example Site Archive",
+      "sources": [
+        {
+          "url": "https://example.com",
+          "name": "Example Site",
+          "depth": 1,
+          "selector": ".main-content"
+        }
+      ],
+      "output": {
+        "directory": "./archive/example",
+        "format": "markdown",
+        "fileNaming": "url-based"
+      }
     }
   ],
-  "output": {
-    "directory": "./archive",
-    "format": "markdown",
-    "fileNaming": "url-based"
-  },
   "crawl": {
     "maxConcurrency": 3,
     "delay": 1000,
@@ -86,62 +91,92 @@ bun install
 
 ### Configuration Options
 
+#### Archives
+Each archive in the `archives` array has:
+- **name** - Name for this archive group
+- **sources** - Single source or array of sources to crawl
+- **output** - Output configuration for this archive
+
 #### Sources
-- **url** - Starting URL to crawl
-- **name** - Optional friendly name for the source
-- **depth** - How many levels deep to crawl (0 = single page)
-- **selector** - Optional CSS selector for content extraction
+Sources can be:
+- A simple URL string: `"https://example.com"`
+- An object with options:
+  - **url** - Starting URL to crawl or collect links from
+  - **name** - Optional friendly name for the source
+  - **depth** - How many levels deep to crawl (0 = don't crawl the source page itself)
+  - **linkSelector** - CSS selector to find links to crawl (simplified support)
+  - **followPattern** - Regex pattern to filter which links to follow
 
 #### Output
 - **directory** - Where to save archived files
 - **format** - Output format: `markdown`, `html`, or `json`
 - **fileNaming** - Naming strategy: `url-based`, `title-based`, or `hash-based`
 
-#### Crawl
+#### Crawl (global settings)
 - **maxConcurrency** - Maximum parallel requests
 - **delay** - Delay between requests in milliseconds
 - **userAgent** - User agent string for requests
 - **timeout** - Request timeout in milliseconds
 
-#### Pure
+#### Pure (global settings)
 - **apiKey** - Your Pure.md API key
 
 ## Usage Examples
 
-### Single Page Archive
+For more complete examples, check out the [examples directory](./examples/).
+
+### Single Archive with Multiple Sources
 
 ```json
 {
-  "sources": [
+  "archives": [
     {
-      "url": "https://docs.example.com/api-reference",
-      "name": "API Documentation"
+      "name": "API Documentation",
+      "sources": [
+        "https://docs.example.com/api-reference",
+        "https://docs.example.com/tutorials"
+      ],
+      "output": {
+        "directory": "./archive/api-docs",
+        "format": "markdown",
+        "fileNaming": "title-based"
+      }
     }
   ],
-  "output": {
-    "directory": "./archive/api-docs",
-    "format": "markdown",
-    "fileNaming": "title-based"
+  "crawl": {
+    "maxConcurrency": 3,
+    "delay": 1000
   }
 }
 ```
 
-### Multi-Page Documentation Site
+### Multiple Archives with Different Configurations
 
 ```json
 {
-  "sources": [
+  "archives": [
     {
-      "url": "https://docs.example.com",
-      "name": "Example Docs",
-      "depth": 2
+      "name": "Documentation Site",
+      "sources": {
+        "url": "https://docs.example.com",
+        "depth": 2
+      },
+      "output": {
+        "directory": "./archive/docs",
+        "format": "markdown",
+        "fileNaming": "url-based"
+      }
+    },
+    {
+      "name": "Blog Posts",
+      "sources": "https://blog.example.com",
+      "output": {
+        "directory": "./archive/blog",
+        "format": "json",
+        "fileNaming": "title-based"
+      }
     }
   ],
-  "output": {
-    "directory": "./archive/example-docs",
-    "format": "markdown",
-    "fileNaming": "url-based"
-  },
   "crawl": {
     "maxConcurrency": 5,
     "delay": 500
@@ -149,31 +184,83 @@ bun install
 }
 ```
 
-### Multiple Sources
+### Complex Multi-Archive Setup
 
 ```json
 {
-  "sources": [
+  "archives": [
     {
-      "url": "https://blog.example.com/post-1",
-      "name": "Blog Post 1"
+      "name": "Technical Documentation",
+      "sources": [
+        {
+          "url": "https://docs.example.com/api",
+          "depth": 2,
+          "selector": ".content"
+        },
+        {
+          "url": "https://docs.example.com/guides",
+          "depth": 1
+        }
+      ],
+      "output": {
+        "directory": "./archive/technical",
+        "format": "markdown",
+        "fileNaming": "url-based"
+      }
     },
     {
-      "url": "https://blog.example.com/post-2",
-      "name": "Blog Post 2"
-    },
-    {
-      "url": "https://docs.example.com",
-      "name": "Documentation",
-      "depth": 1
+      "name": "Blog Archive",
+      "sources": [
+        "https://blog.example.com/2024/01",
+        "https://blog.example.com/2024/02",
+        "https://blog.example.com/2024/03"
+      ],
+      "output": {
+        "directory": "./archive/blog-2024",
+        "format": "json",
+        "fileNaming": "title-based"
+      }
     }
   ],
-  "output": {
-    "directory": "./archive/mixed-content",
-    "format": "json"
+  "crawl": {
+    "maxConcurrency": 3,
+    "delay": 2000,
+    "userAgent": "Archivist/1.0"
+  },
+  "pure": {
+    "apiKey": "your-api-key"
   }
 }
 ```
+
+### Link Collection Example
+
+Use a page as a link collector to crawl all documentation pages:
+
+```json
+{
+  "archives": [
+    {
+      "name": "API Reference",
+      "sources": {
+        "url": "https://docs.example.com/api/index",
+        "depth": 0,
+        "followPattern": "https://docs\\.example\\.com/api/v1/.*"
+      },
+      "output": {
+        "directory": "./archive/api-reference",
+        "format": "markdown"
+      }
+    }
+  ]
+}
+```
+
+In this example:
+- The index page at `/api/index` is used only to collect links
+- `depth: 0` means the index page itself won't be archived
+- Only links matching the `followPattern` regex will be crawled
+- All matched links will be crawled and archived
 
 ## CLI Reference
 
