@@ -65,7 +65,7 @@ describe('PureMdClient', () => {
 
       const result = await client.fetchContent('https://example.com');
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/https%3A%2F%2Fexample.com');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/https://example.com');
       expect(result).toBe(mockContent);
     });
 
@@ -118,7 +118,7 @@ describe('PureMdClient', () => {
       const result = await client.extractData('https://example.com', {});
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/https%3A%2F%2Fexample.com',
+        '/https://example.com',
         {
           prompt: 'Extract the main content and metadata',
           model: 'meta/llama-3.1-8b',
@@ -137,7 +137,7 @@ describe('PureMdClient', () => {
       });
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/https%3A%2F%2Fexample.com',
+        '/https://example.com',
         {
           prompt: 'Custom prompt',
           model: 'custom/model',
