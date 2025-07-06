@@ -67,10 +67,12 @@ describe('Crawler Link Deduplication', () => {
             {
               url: 'https://example.com/page1',
               linkSelector: 'a[href]',
+              depth: 0,
             },
             {
               url: 'https://example.com/page2',
               linkSelector: 'a[href]',
+              depth: 0,
             },
           ],
           output: {
