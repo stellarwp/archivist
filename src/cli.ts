@@ -5,14 +5,13 @@ import { ArchivistConfigSchema, defaultConfig } from '../archivist.config';
 import { WebCrawler } from './crawler';
 import { existsSync } from 'fs';
 import path from 'path';
-import { isLegacyConfig, migrateLegacyConfig } from './utils/config-migration';
 
 const program = new Command();
 
 program
   .name('archivist')
   .description('Archive web content for LLM context')
-  .version('0.1.0-beta.2');
+  .version('0.1.0-beta.3');
 
 program
   .command('crawl')
@@ -31,23 +30,16 @@ program
         console.log(`Loading config from: ${configPath}`);
         const configFile = await Bun.file(configPath).json();
         
-        // Check if it's a legacy config and migrate if needed
-        if (isLegacyConfig(configFile)) {
-          const migratedConfig = migrateLegacyConfig(configFile);
-          config = ArchivistConfigSchema.parse(migratedConfig);
-          
-          // Optionally save the migrated config
-          console.log('Note: Your configuration has been automatically migrated to the new format.');
-          console.log('Consider updating your config file to use the new structure.');
-        } else {
-          config = ArchivistConfigSchema.parse(configFile);
-        }
+        config = ArchivistConfigSchema.parse(configFile);
       } else {
         console.log('No config file found, using defaults');
       }
 
       // Override with CLI options
       if (options.pureKey) {
+        if (!config.pure) {
+          config.pure = {};
+        }
         config.pure.apiKey = options.pureKey;
       }
 
@@ -117,14 +109,15 @@ program
         delay: 1000,
         userAgent: 'Archivist/1.0',
         timeout: 30000
-      },
-      pure: {
-        apiKey: 'your-api-key-here'
       }
     };
 
     await Bun.write('./archivist.config.json', JSON.stringify(exampleConfig, null, 2));
     console.log('Created archivist.config.json');
+    console.log('\nTo use Pure.md for content extraction, add a "pure" section:');
+    console.log('  "pure": {');
+    console.log('    "apiKey": "your-api-key-here"');
+    console.log('  }');
   });
 
 program.parse();

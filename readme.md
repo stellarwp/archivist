@@ -104,7 +104,8 @@ Sources can be:
   - **name** - Optional friendly name for the source
   - **depth** - How many levels deep to crawl (0 = don't crawl the source page itself)
   - **linkSelector** - CSS selector to find links to crawl (simplified support, primarily for link collection)
-  - **followPattern** - Regex pattern to filter which links to follow
+  - **includePatterns** - Array of regex patterns - only links matching at least one will be followed
+  - **excludePatterns** - Array of regex patterns - links matching any of these will be excluded
 
 #### Output
 - **directory** - Where to save archived files
@@ -243,7 +244,7 @@ Use a page as a link collector to crawl all documentation pages:
       "sources": {
         "url": "https://docs.example.com/api/index",
         "depth": 0,
-        "followPattern": "https://docs\\.example\\.com/api/v1/.*"
+        "includePatterns": ["https://docs\\.example\\.com/api/v1/.*"]
       },
       "output": {
         "directory": "./archive/api-reference",
@@ -257,8 +258,44 @@ Use a page as a link collector to crawl all documentation pages:
 In this example:
 - The index page at `/api/index` is used only to collect links
 - `depth: 0` means the index page itself won't be archived
-- Only links matching the `followPattern` regex will be crawled
+- Only links matching the `includePatterns` regex will be crawled
 - All matched links will be crawled and archived
+
+## Enhanced Pattern Filtering (v0.1.0-beta.3+)
+
+Control which links are followed during crawling with include and exclude patterns:
+
+```json
+{
+  "archives": [
+    {
+      "name": "Filtered Documentation",
+      "sources": {
+        "url": "https://docs.example.com",
+        "depth": 2,
+        "includePatterns": [
+          "https://docs\\.example\\.com/api/.*",
+          "https://docs\\.example\\.com/guides/.*"
+        ],
+        "excludePatterns": [
+          ".*\\.pdf$",
+          ".*/archive/.*",
+          ".*/deprecated/.*"
+        ]
+      },
+      "output": {
+        "directory": "./archive/filtered-docs"
+      }
+    }
+  ]
+}
+```
+
+Pattern behavior:
+- **includePatterns**: Array of regex patterns - links must match at least one to be followed
+- **excludePatterns**: Array of regex patterns - links matching any of these are excluded
+- Patterns are applied to the full URL
+- Both arrays are optional - omit for no filtering
 
 ## CLI Reference
 
@@ -351,14 +388,26 @@ Self-contained HTML with metadata:
 - **title-based** - Uses the page title with a hash: `api-reference-guide-a1b2c3d4.md`
 - **hash-based** - Uses only a content hash: `f47ac10b58cc4372.md`
 
-## Pure.md Integration
+## Content Extraction
 
-This tool uses [Pure.md](https://pure.md) API for clean content extraction:
+### Pure.md Integration (Recommended)
+
+This tool uses [Pure.md](https://pure.md) API for clean content extraction when available:
 
 - No HTML parsing needed
 - Automatic removal of ads, navigation, and clutter
 - Clean markdown output
 - Better handling of dynamic content
+
+### Link Discovery Fallback (v0.1.0-beta.3+)
+
+When Pure.md is unavailable or fails, Archivist uses Cheerio for link discovery only:
+
+- Discovers all links on a page for crawling
+- Useful for pagination and finding all content pages
+- No content extraction - Pure.md remains the only content extractor
+- Pages without successful Pure.md extraction show placeholder content
+- Ensures comprehensive crawling even when content extraction fails
 
 ### Getting an API Key
 

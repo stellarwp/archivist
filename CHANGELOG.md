@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.3] - 2025-01-05
+
+### Added
+
+- **Cheerio-based Link Discovery**
+  - Link discoverer for finding all links on a page when Pure.md is unavailable
+  - Used for pagination and discovering crawlable URLs
+  - Extracts and normalizes all links from HTML pages
+  - Pure.md remains the only tool for content extraction
+  - When Pure.md fails, pages are marked with placeholder content
+  
+- **Enhanced Link Filtering**
+  - Replaced single `followPattern` with `includePatterns` and `excludePatterns` arrays
+  - Support for multiple include patterns (link must match at least one)
+  - Support for multiple exclude patterns (link must not match any)
+  - Patterns can be combined for sophisticated filtering logic
+  - Applied during both link collection and crawling phases
+
+### Changed
+
+- **Source Configuration**
+  - `followPattern` property replaced with `includePatterns` array
+  - Added `excludePatterns` array for negative filtering
+  - Both pattern arrays accept regular expressions as strings
+  - Pattern filtering now supports more complex URL matching scenarios
+
+- **Crawler Behavior**
+  - Pure.md is the exclusive content extractor
+  - Cheerio is used only for link discovery when Pure.md fails
+  - Without Pure.md API key, only links are discovered (no content extraction)
+  - Pages without successful Pure.md extraction show placeholder content
+  - Improved separation of concerns: content extraction vs link discovery
+
+### Fixed
+
+- Fixed `filterLinks` method implementation in ArchiveCrawler
+- Updated tests to use new pattern array syntax
+- Improved error messages for invalid regex patterns
+
+### Removed
+
+- Removed legacy configuration format support (still in beta)
+- Removed automatic config migration utilities
+- Removed backward compatibility code
+
 ## [0.1.0-beta.2] - 2025-01-05
 
 ### Fixed
@@ -30,10 +75,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Filter links with regex patterns for precise control
   - Set `depth: 0` to only collect links without archiving the index page
   
-- **Backward Compatibility**
-  - Automatic migration from legacy configuration format
-  - Helpful migration messages for users with old configs
-  - Seamless upgrade path without breaking existing setups
 
 ### Changed
 

@@ -5,7 +5,7 @@
       "sources": {
         "url": "https://docs.example.com/index",
         "depth": 0,
-        "followPattern": "https://docs\\.example\\.com/reference/.*",
+        "includePatterns": ["https://docs\\.example\\.com/reference/.*"],
         "name": "Documentation Index"
       },
       "output": {
@@ -20,13 +20,13 @@
         {
           "url": "https://blog.example.com/archive/2024",
           "depth": 0,
-          "followPattern": "https://blog\\.example\\.com/posts/.*",
+          "includePatterns": ["https://blog\\.example\\.com/posts/.*"],
           "name": "2024 Archive Page"
         },
         {
           "url": "https://blog.example.com/featured",
           "depth": 0,
-          "followPattern": "https://blog\\.example\\.com/posts/.*",
+          "includePatterns": ["https://blog\\.example\\.com/posts/.*"],
           "name": "Featured Posts Page"
         }
       ],
@@ -42,8 +42,5 @@
     "delay": 1500,
     "userAgent": "Archivist/1.0",
     "timeout": 30000
-  },
-  "pure": {
-    "apiKey": "your-api-key-here"
   }
 }

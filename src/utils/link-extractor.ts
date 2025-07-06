@@ -3,11 +3,12 @@ import axios from 'axios';
 export interface LinkExtractionOptions {
   url: string;
   linkSelector?: string;
-  followPattern?: string;
+  includePatterns?: string[];
+  excludePatterns?: string[];
 }
 
 export async function extractLinksFromPage(options: LinkExtractionOptions): Promise<string[]> {
-  const { url, linkSelector, followPattern } = options;
+  const { url, linkSelector, includePatterns, excludePatterns } = options;
   
   try {
     // Fetch the HTML content
@@ -49,10 +50,35 @@ export async function extractLinksFromPage(options: LinkExtractionOptions): Prom
       try {
         const absoluteUrl = new URL(href, url).toString();
         
-        // Apply follow pattern if specified
-        if (followPattern) {
-          const pattern = new RegExp(followPattern);
-          if (!pattern.test(absoluteUrl)) {
+        // Apply include/exclude patterns
+        if (includePatterns && includePatterns.length > 0) {
+          // Must match at least one include pattern
+          const matchesInclude = includePatterns.some(pattern => {
+            try {
+              return new RegExp(pattern).test(absoluteUrl);
+            } catch {
+              console.warn(`Invalid include pattern: ${pattern}`);
+              return false;
+            }
+          });
+          
+          if (!matchesInclude) {
+            continue;
+          }
+        }
+        
+        if (excludePatterns && excludePatterns.length > 0) {
+          // Must not match any exclude pattern
+          const matchesExclude = excludePatterns.some(pattern => {
+            try {
+              return new RegExp(pattern).test(absoluteUrl);
+            } catch {
+              console.warn(`Invalid exclude pattern: ${pattern}`);
+              return false;
+            }
+          });
+          
+          if (matchesExclude) {
             continue;
           }
         }
@@ -70,7 +96,7 @@ export async function extractLinksFromPage(options: LinkExtractionOptions): Prom
     // Note: This is a simplified approach. For better selector support,
     // consider using a proper HTML parser like cheerio
     if (linkSelector) {
-      console.log(`Note: CSS selector support (${linkSelector}) is simplified. Consider using followPattern for more precise filtering.`);
+      console.log(`Note: CSS selector support (${linkSelector}) is simplified. Consider using includePatterns/excludePatterns for more precise filtering.`);
     }
     
     // Remove duplicates

@@ -33,8 +33,5 @@
     "delay": 2000,
     "userAgent": "Archivist Documentation Crawler/1.0",
     "timeout": 45000
-  },
-  "pure": {
-    "apiKey": "your-pure-md-api-key-here"
   }
 }

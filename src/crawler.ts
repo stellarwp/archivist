@@ -1,5 +1,6 @@
 import type { ArchivistConfig, Archive, Source } from '../archivist.config';
 import { PureMdClient } from './services/pure-md';
+import { LinkDiscoverer } from './services/link-discoverer';
 import { parseMarkdownContent } from './utils/markdown-parser';
 import type { PageContent } from './utils/content-formatter';
 import { 
@@ -21,7 +22,7 @@ export class WebCrawler {
   constructor(config: ArchivistConfig) {
     this.config = config;
     this.pureClient = new PureMdClient({
-      apiKey: config.pure.apiKey,
+      apiKey: config.pure?.apiKey,
     });
   }
 
@@ -49,6 +50,7 @@ class ArchiveCrawler {
   private visited: Set<string> = new Set();
   private results: PageContent[] = [];
   private pureClient: PureMdClient;
+  private linkDiscoverer: LinkDiscoverer;
   private sourceMap: Map<string, Source> = new Map();
 
   constructor(
@@ -59,6 +61,10 @@ class ArchiveCrawler {
     this.archive = archive;
     this.crawlConfig = crawlConfig;
     this.pureClient = pureClient;
+    this.linkDiscoverer = new LinkDiscoverer({
+      userAgent: crawlConfig.userAgent,
+      timeout: crawlConfig.timeout,
+    });
   }
 
   async crawl(): Promise<PageContent[]> {
@@ -75,13 +81,14 @@ class ArchiveCrawler {
         this.sourceMap.set(source, source);
       } else {
         // Object source - check if it has link collection settings
-        if (source.linkSelector || source.followPattern) {
+        if (source.linkSelector || source.includePatterns || source.excludePatterns) {
           // This is a link collection page
           console.log(`Collecting links from: ${source.url}`);
           const links = await extractLinksFromPage({
             url: source.url,
             linkSelector: source.linkSelector,
-            followPattern: source.followPattern
+            includePatterns: source.includePatterns,
+            excludePatterns: source.excludePatterns
           });
           
           console.log(`Found ${links.length} links to crawl`);
@@ -149,15 +156,49 @@ class ArchiveCrawler {
       await new Promise(resolve => setTimeout(resolve, this.crawlConfig.delay));
     }
 
+    // Find the source configuration for this URL
+    const source = this.findSourceForUrl(url);
+    let pageContent: PageContent;
+
     try {
-      // Use Pure.md to fetch content
-      const markdownContent = await this.pureClient.fetchContent(url);
-      
-      // Parse the markdown content
-      const pageContent = parseMarkdownContent(markdownContent, url);
-      
-      // Find the source configuration for this URL
-      const source = this.findSourceForUrl(url);
+      // Try to get content with Pure.md
+      if (this.pureClient && process.env.PURE_API_KEY) {
+        try {
+          const markdownContent = await this.pureClient.fetchContent(url);
+          pageContent = parseMarkdownContent(markdownContent, url);
+        } catch (pureMdError) {
+          // If Pure.md fails, just discover links with Cheerio
+          console.log(`Pure.md failed for ${url}, discovering links only`);
+          const discovered = await this.linkDiscoverer.discoverLinks(url);
+          
+          // Create minimal page content with discovered links
+          pageContent = {
+            url: discovered.url,
+            title: `Page at ${url}`,
+            content: `[Content not available - Pure.md extraction failed]`,
+            metadata: {
+              crawledAt: discovered.crawledAt,
+              contentLength: 0,
+              links: discovered.links,
+            },
+          };
+        }
+      } else {
+        // No Pure.md API key, just discover links
+        console.log(`No Pure.md API key, discovering links only for ${url}`);
+        const discovered = await this.linkDiscoverer.discoverLinks(url);
+        
+        pageContent = {
+          url: discovered.url,
+          title: `Page at ${url}`,
+          content: `[Content not available - Pure.md API key required]`,
+          metadata: {
+            crawledAt: discovered.crawledAt,
+            contentLength: 0,
+            links: discovered.links,
+          },
+        };
+      }
       
       this.results.push(pageContent);
 
@@ -167,7 +208,18 @@ class ArchiveCrawler {
         const sourceUrl = typeof source === 'string' ? source : source.url;
         const currentDepth = this.getDepth(url, sourceUrl);
         if (currentDepth < depth) {
-          for (const link of pageContent.metadata.links) {
+          // Apply include/exclude patterns to discovered links
+          let filteredLinks = pageContent.metadata.links;
+          
+          if (typeof source !== 'string' && (source.includePatterns || source.excludePatterns)) {
+            filteredLinks = this.filterLinks(
+              pageContent.metadata.links, 
+              source.includePatterns,
+              source.excludePatterns
+            );
+          }
+          
+          for (const link of filteredLinks) {
             if (this.isSameDomain(link, url) && !this.visited.has(link)) {
               this.queue.add(link);
               // Inherit source configuration for child pages
@@ -226,6 +278,52 @@ class ArchiveCrawler {
     if (!source) return 0;
     if (typeof source === 'string') return 0;
     return source.depth ?? 0;
+  }
+
+  private filterLinks(
+    links: string[], 
+    includePatterns?: string[], 
+    excludePatterns?: string[]
+  ): string[] {
+    if (!includePatterns && !excludePatterns) {
+      return links;
+    }
+
+    return links.filter(link => {
+      // Check include patterns - if specified, link must match at least one
+      if (includePatterns && includePatterns.length > 0) {
+        const matchesInclude = includePatterns.some(pattern => {
+          try {
+            return new RegExp(pattern).test(link);
+          } catch (e) {
+            console.warn(`Invalid include pattern: ${pattern}`);
+            return false;
+          }
+        });
+        
+        if (!matchesInclude) {
+          return false;
+        }
+      }
+      
+      // Check exclude patterns - link must not match any
+      if (excludePatterns && excludePatterns.length > 0) {
+        const matchesExclude = excludePatterns.some(pattern => {
+          try {
+            return new RegExp(pattern).test(link);
+          } catch (e) {
+            console.warn(`Invalid exclude pattern: ${pattern}`);
+            return false;
+          }
+        });
+        
+        if (matchesExclude) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
   }
 
   async save(): Promise<void> {

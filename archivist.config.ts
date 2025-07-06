@@ -8,7 +8,8 @@ const SourceSchema = z.union([
     name: z.string().optional(),
     depth: z.number().min(0).max(3).default(0),
     linkSelector: z.string().optional().describe('CSS selector to find links to crawl'),
-    followPattern: z.string().optional().describe('Regex pattern to filter which links to follow'),
+    includePatterns: z.array(z.string()).optional().describe('Regex patterns - only follow links matching these'),
+    excludePatterns: z.array(z.string()).optional().describe('Regex patterns - exclude links matching these'),
   })
 ]);
 
@@ -39,7 +40,7 @@ export const ArchivistConfigSchema = z.object({
   }),
   pure: z.object({
     apiKey: z.string().optional(),
-  }),
+  }).optional(),
 });
 
 export type ArchivistConfig = z.infer<typeof ArchivistConfigSchema>;
@@ -54,5 +55,4 @@ export const defaultConfig: ArchivistConfig = {
     userAgent: 'Archivist/1.0',
     timeout: 30000,
   },
-  pure: {},
 };
