@@ -148,9 +148,9 @@ archivist/
 │   ├── cli.ts              # CLI entry point
 │   ├── crawler.ts          # Main crawler logic with multi-archive support
 │   ├── services/
-│   │   └── pure-md.ts      # Pure.md API client
+│   │   ├── link-discoverer.ts  # Cheerio-based link discovery
+│   │   └── pure-md.ts          # Pure.md API client
 │   └── utils/
-│       ├── config-migration.ts   # Legacy config migration
 │       ├── content-formatter.ts  # Output formatting
 │       ├── file-naming.ts       # File naming strategies
 │       ├── link-extractor.ts    # Link extraction for index pages

@@ -46,6 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated tests to use new pattern array syntax
 - Improved error messages for invalid regex patterns
 
+### Removed
+
+- Removed legacy configuration format support (still in beta)
+- Removed automatic config migration utilities
+- Removed backward compatibility code
+
 ## [0.1.0-beta.2] - 2025-01-05
 
 ### Fixed
@@ -69,10 +75,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Filter links with regex patterns for precise control
   - Set `depth: 0` to only collect links without archiving the index page
   
-- **Backward Compatibility**
-  - Automatic migration from legacy configuration format
-  - Helpful migration messages for users with old configs
-  - Seamless upgrade path without breaking existing setups
 
 ### Changed
 
