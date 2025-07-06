@@ -6,7 +6,7 @@ const SourceSchema = z.union([
   z.object({
     url: z.string().url(),
     name: z.string().optional(),
-    depth: z.number().min(0).max(3).default(0),
+    depth: z.number().min(0).max(3).default(0).optional(),
     linkSelector: z.string().optional().describe('CSS selector to find links to crawl'),
     includePatterns: z.array(z.string()).optional().describe('Regex patterns - only follow links matching these'),
     excludePatterns: z.array(z.string()).optional().describe('Regex patterns - exclude links matching these'),
