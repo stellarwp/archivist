@@ -73,6 +73,10 @@ class ArchiveCrawler {
       ? this.archive.sources 
       : [this.archive.sources];
     
+    // Track total links collected for logging
+    let totalLinksCollected = 0;
+    let uniqueLinksAdded = 0;
+
     // Process sources - some might be link collection pages
     for (const source of sources) {
       if (typeof source === 'string') {
@@ -89,17 +93,31 @@ class ArchiveCrawler {
           excludePatterns: source.excludePatterns
         });
         
-        console.log(`Found ${links.length} links to crawl`);
+        console.log(`Found ${links.length} links from ${source.url}`);
+        totalLinksCollected += links.length;
         
-        // Add collected links to queue
+        // Add collected links to queue (Set automatically handles duplicates)
+        const queueSizeBefore = this.queue.size;
         for (const link of links) {
           this.queue.add(link);
           // Store the source configuration for these links
-          this.sourceMap.set(link, source);
+          if (!this.sourceMap.has(link)) {
+            this.sourceMap.set(link, source);
+          }
+        }
+        const newLinksAdded = this.queue.size - queueSizeBefore;
+        uniqueLinksAdded += newLinksAdded;
+        
+        if (newLinksAdded < links.length) {
+          console.log(`  Added ${newLinksAdded} unique links (${links.length - newLinksAdded} duplicates removed)`);
         }
         
         // Object sources are used for link collection - don't add the source URL itself to queue
       }
+    }
+
+    if (totalLinksCollected > 0) {
+      console.log(`Total: Collected ${totalLinksCollected} links, ${uniqueLinksAdded} unique links added to queue`);
     }
 
     const concurrencyLimit = this.crawlConfig.maxConcurrency;

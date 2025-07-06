@@ -135,4 +135,46 @@ describe('Crawler Pattern Filtering', () => {
       expect(testPatternMatching('https://example.com', undefined, [])).toBe(true);
     });
   });
+
+  describe('link deduplication', () => {
+    it('should handle duplicate links in a Set', () => {
+      const linkSet = new Set<string>();
+      
+      // Add same link multiple times
+      linkSet.add('https://example.com/page1');
+      linkSet.add('https://example.com/page2');
+      linkSet.add('https://example.com/page1'); // duplicate
+      linkSet.add('https://example.com/page3');
+      linkSet.add('https://example.com/page2'); // duplicate
+      linkSet.add('https://example.com/page1'); // duplicate
+      
+      // Set should only contain unique values
+      expect(linkSet.size).toBe(3);
+      expect(Array.from(linkSet)).toEqual([
+        'https://example.com/page1',
+        'https://example.com/page2',
+        'https://example.com/page3'
+      ]);
+    });
+
+    it('should track duplicate counts correctly', () => {
+      const queue = new Set<string>();
+      const links = [
+        'https://example.com/article1',
+        'https://example.com/article2',
+        'https://example.com/article1', // duplicate
+        'https://example.com/article3',
+        'https://example.com/article2', // duplicate
+      ];
+      
+      const queueSizeBefore = queue.size;
+      for (const link of links) {
+        queue.add(link);
+      }
+      const newLinksAdded = queue.size - queueSizeBefore;
+      
+      expect(newLinksAdded).toBe(3); // Only 3 unique links
+      expect(links.length - newLinksAdded).toBe(2); // 2 duplicates
+    });
+  });
 });

@@ -1,55 +1,59 @@
-import { describe, expect, it, mock } from 'bun:test';
+import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
 import { extractLinksFromPage } from '../../../src/utils/link-extractor';
 import axios from 'axios';
 
-// Mock axios
-mock.module('axios', () => ({
-  default: {
-    get: mock((url: string) => {
-      if (url === 'https://example.com/index') {
-        return Promise.resolve({
-          data: `
-            <!DOCTYPE html>
-            <html>
-            <body>
-              <h1>Documentation Index</h1>
-              <div class="links">
-                <a href="https://example.com/api/users">Users API</a>
-                <a href="https://example.com/api/posts">Posts API</a>
-                <a href="https://example.com/guides/intro">Introduction</a>
-                <a href="/api/comments">Comments API</a>
-                <a href="mailto:support@example.com">Contact</a>
-                <a href="#section">Jump to section</a>
-                <a href="https://external.com/resource">External Link</a>
-              </div>
-            </body>
-            </html>
-          `,
-        });
-      }
-      if (url === 'https://example.com/blog') {
-        return Promise.resolve({
-          data: `
-            <!DOCTYPE html>
-            <html>
-            <body>
-              <div class="blog-posts">
-                <a href="https://example.com/blog/post-1.html">Post 1</a>
-                <a href="https://example.com/blog/post-2.html">Post 2</a>
-                <a href="https://example.com/blog/draft.html">Draft Post</a>
-                <a href="https://example.com/about">About</a>
-              </div>
-            </body>
-            </html>
-          `,
-        });
-      }
-      return Promise.reject(new Error('Not found'));
-    }),
-  },
-}));
+// Store original axios.get
+const originalAxiosGet = axios.get;
+
+// Mock responses
+const mockResponses: Record<string, string> = {
+  'https://example.com/index': `
+    <!DOCTYPE html>
+    <html>
+    <body>
+      <h1>Documentation Index</h1>
+      <div class="links">
+        <a href="https://example.com/api/users">Users API</a>
+        <a href="https://example.com/api/posts">Posts API</a>
+        <a href="https://example.com/guides/intro">Introduction</a>
+        <a href="/api/comments">Comments API</a>
+        <a href="mailto:support@example.com">Contact</a>
+        <a href="#section">Jump to section</a>
+        <a href="https://external.com/resource">External Link</a>
+      </div>
+    </body>
+    </html>
+  `,
+  'https://example.com/blog': `
+    <!DOCTYPE html>
+    <html>
+    <body>
+      <div class="blog-posts">
+        <a href="https://example.com/blog/post-1.html">Post 1</a>
+        <a href="https://example.com/blog/post-2.html">Post 2</a>
+        <a href="https://example.com/blog/draft.html">Draft Post</a>
+        <a href="https://example.com/about">About</a>
+      </div>
+    </body>
+    </html>
+  `,
+};
 
 describe('link-extractor', () => {
+  beforeEach(() => {
+    // Mock axios.get for this test suite
+    axios.get = mock((url: string) => {
+      if (mockResponses[url]) {
+        return Promise.resolve({ data: mockResponses[url] });
+      }
+      return Promise.reject(new Error('Not found'));
+    }) as any;
+  });
+
+  afterEach(() => {
+    // Restore original axios.get
+    axios.get = originalAxiosGet;
+  });
   describe('extractLinksFromPage', () => {
     it('should extract all HTTP/HTTPS links from a page', async () => {
       const links = await extractLinksFromPage({
@@ -136,15 +140,15 @@ describe('link-extractor', () => {
     });
 
     it('should remove duplicate links', async () => {
-      // Mock a page with duplicate links
-      const mockGet = axios.get as any;
-      mockGet.mockImplementationOnce(() => Promise.resolve({
+      // Temporarily override mock for this specific test
+      const currentMock = axios.get;
+      axios.get = mock(() => Promise.resolve({
         data: `
           <a href="https://example.com/page">Link 1</a>
           <a href="https://example.com/page">Link 2</a>
           <a href="https://example.com/page">Link 3</a>
         `,
-      }));
+      })) as any;
 
       const links = await extractLinksFromPage({
         url: 'https://example.com/test',
@@ -152,6 +156,9 @@ describe('link-extractor', () => {
 
       // Should only have one instance
       expect(links).toEqual(['https://example.com/page']);
+      
+      // Restore the mock
+      axios.get = currentMock;
     });
 
     it('should handle errors gracefully', async () => {
@@ -163,28 +170,33 @@ describe('link-extractor', () => {
     });
 
     it('should handle pages with no links', async () => {
-      const mockGet = axios.get as any;
-      mockGet.mockImplementationOnce(() => Promise.resolve({
+      // Temporarily override mock for this specific test
+      const currentMock = axios.get;
+      axios.get = mock(() => Promise.resolve({
         data: '<html><body><p>No links here</p></body></html>',
-      }));
+      })) as any;
 
       const links = await extractLinksFromPage({
         url: 'https://example.com/nolinks',
       });
 
       expect(links).toEqual([]);
+      
+      // Restore the mock
+      axios.get = currentMock;
     });
 
     it('should handle malformed URLs gracefully', async () => {
-      const mockGet = axios.get as any;
-      mockGet.mockImplementationOnce(() => Promise.resolve({
+      // Temporarily override mock for this specific test
+      const currentMock = axios.get;
+      axios.get = mock(() => Promise.resolve({
         data: `
           <a href="https://example.com/valid">Valid Link</a>
           <a href="javascript:void(0)">JS Link</a>
           <a href="://broken">Broken Link</a>
           <a href="">Empty Link</a>
         `,
-      }));
+      })) as any;
 
       const links = await extractLinksFromPage({
         url: 'https://example.com/mixed',
@@ -192,6 +204,9 @@ describe('link-extractor', () => {
 
       // Should only contain valid URLs
       expect(links).toEqual(['https://example.com/valid']);
+      
+      // Restore the mock
+      axios.get = currentMock;
     });
   });
 });
