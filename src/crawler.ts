@@ -80,35 +80,25 @@ class ArchiveCrawler {
         this.queue.add(source);
         this.sourceMap.set(source, source);
       } else {
-        // Object source - check if it has link collection settings
-        if (source.linkSelector || source.includePatterns || source.excludePatterns) {
-          // This is a link collection page
-          console.log(`Collecting links from: ${source.url}`);
-          const links = await extractLinksFromPage({
-            url: source.url,
-            linkSelector: source.linkSelector,
-            includePatterns: source.includePatterns,
-            excludePatterns: source.excludePatterns
-          });
-          
-          console.log(`Found ${links.length} links to crawl`);
-          
-          // Add collected links to queue
-          for (const link of links) {
-            this.queue.add(link);
-            // Store the source configuration for these links
-            this.sourceMap.set(link, source);
-          }
-          
-          // If depth is 0, we don't crawl the collection page itself
-          if (source.depth === 0) {
-            continue;
-          }
+        // Object source - always extract links from this page
+        console.log(`Collecting links from: ${source.url}`);
+        const links = await extractLinksFromPage({
+          url: source.url,
+          linkSelector: source.linkSelector || 'a[href]', // Default linkSelector
+          includePatterns: source.includePatterns,
+          excludePatterns: source.excludePatterns
+        });
+        
+        console.log(`Found ${links.length} links to crawl`);
+        
+        // Add collected links to queue
+        for (const link of links) {
+          this.queue.add(link);
+          // Store the source configuration for these links
+          this.sourceMap.set(link, source);
         }
         
-        // Add the source URL itself to queue (unless it was just for link collection)
-        this.queue.add(source.url);
-        this.sourceMap.set(source.url, source);
+        // Object sources are used for link collection - don't add the source URL itself to queue
       }
     }
 
