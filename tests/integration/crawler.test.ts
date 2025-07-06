@@ -30,7 +30,6 @@ describe('WebCrawler Integration', () => {
       userAgent: 'Archivist-Test/1.0',
       timeout: 5000,
     },
-    pure: {},
   };
 
   beforeEach(async () => {

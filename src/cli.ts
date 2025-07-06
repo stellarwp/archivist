@@ -37,6 +37,9 @@ program
 
       // Override with CLI options
       if (options.pureKey) {
+        if (!config.pure) {
+          config.pure = {};
+        }
         config.pure.apiKey = options.pureKey;
       }
 
@@ -106,14 +109,15 @@ program
         delay: 1000,
         userAgent: 'Archivist/1.0',
         timeout: 30000
-      },
-      pure: {
-        apiKey: 'your-api-key-here'
       }
     };
 
     await Bun.write('./archivist.config.json', JSON.stringify(exampleConfig, null, 2));
     console.log('Created archivist.config.json');
+    console.log('\nTo use Pure.md for content extraction, add a "pure" section:');
+    console.log('  "pure": {');
+    console.log('    "apiKey": "your-api-key-here"');
+    console.log('  }');
   });
 
 program.parse();

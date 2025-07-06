@@ -22,7 +22,7 @@ export class WebCrawler {
   constructor(config: ArchivistConfig) {
     this.config = config;
     this.pureClient = new PureMdClient({
-      apiKey: config.pure.apiKey,
+      apiKey: config.pure?.apiKey,
     });
   }
 

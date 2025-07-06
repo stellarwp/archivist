@@ -40,7 +40,7 @@ export const ArchivistConfigSchema = z.object({
   }),
   pure: z.object({
     apiKey: z.string().optional(),
-  }),
+  }).optional(),
 });
 
 export type ArchivistConfig = z.infer<typeof ArchivistConfigSchema>;
@@ -55,5 +55,4 @@ export const defaultConfig: ArchivistConfig = {
     userAgent: 'Archivist/1.0',
     timeout: 30000,
   },
-  pure: {},
 };

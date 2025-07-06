@@ -30,8 +30,5 @@
     "delay": 2000,
     "userAgent": "Archivist/1.0",
     "timeout": 30000
-  },
-  "pure": {
-    "apiKey": ""
   }
 }
