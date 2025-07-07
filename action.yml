@@ -1,0 +1,25 @@
+name: 'Archivist Web Archiver'
+description: 'Archive web content for LLM context using Pure.md API'
+author: 'StellarWP'
+branding:
+  icon: 'archive'
+  color: 'blue'
+
+inputs:
+  config-file:
+    description: 'Path to archivist configuration file (JSON format)'
+    required: false
+    default: 'archivist.config.json'
+  pure-api-key:
+    description: 'Pure.md API key for enhanced content extraction'
+    required: false
+
+outputs:
+  total-files:
+    description: 'Total number of files archived'
+  total-errors:
+    description: 'Total number of errors encountered'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

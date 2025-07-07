@@ -1,0 +1,63 @@
+name: Build GitHub Action
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'bun.lockb'
+      - 'action.yml'
+      - '.github/workflows/build-action.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build action
+        run: npm run build:action
+      
+      - name: Check if dist changed
+        id: diff
+        run: |
+          if [ -f dist/index.js ]; then
+            echo "dist_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "dist_exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit and push to action branch
+        if: steps.diff.outputs.dist_exists == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Create or checkout action branch
+          git checkout -B action
+          
+          # Copy necessary files
+          cp -r dist action.yml package.json README.md LICENSE ./
+          
+          # Add and commit
+          git add dist/index.js action.yml package.json README.md LICENSE
+          git commit -m "Build action from ${{ github.sha }}" || echo "No changes to commit"
+          
+          # Force push to action branch
+          git push origin action --force

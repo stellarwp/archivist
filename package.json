@@ -37,11 +37,13 @@
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
-    "prepublishOnly": "bun test && bunx tsc --noEmit"
+    "prepublishOnly": "bun test && bunx tsc --noEmit",
+    "build:action": "node build/build-action.js"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^20.0.0",
+    "esbuild": "^0.25.5",
     "typescript": "^5"
   },
   "dependencies": {

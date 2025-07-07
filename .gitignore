@@ -3,7 +3,7 @@ node_modules
 
 # output
 out
-dist
+dist  # GitHub Action build output (committed to 'action' branch only)
 *.tgz
 
 # code coverage
