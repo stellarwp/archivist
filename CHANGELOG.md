@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.4] - 2025-01-06
+
+### Changed
+
+- **Object Sources Behavior**
+  - Object sources are now exclusively used for link collection
+  - The source URL itself is no longer crawled when using object notation
+  - Default `linkSelector` is now `'a[href]'` when not specified
+  - This prevents duplicate crawling and clarifies the purpose of object sources
+
+- **Configuration Improvements**
+  - Made `pure` configuration section optional
+  - No longer requires empty `apiKey` string
+  - Cleaner configuration files without unnecessary sections
+
+### Improved
+
+- **Developer Experience**
+  - Added helpful message in init command about Pure.md API key
+  - Better separation between required and optional configuration
+  - More intuitive configuration structure
+
 ## [0.1.0-beta.3] - 2025-01-05
 
 ### Added

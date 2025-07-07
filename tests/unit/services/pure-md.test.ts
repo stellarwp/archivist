@@ -1,17 +1,10 @@
-import { describe, expect, it, mock, beforeEach } from 'bun:test';
+import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
 import axios from 'axios';
 import { PureMdClient } from '../../../src/services/pure-md';
 
-// Mock axios
-mock.module('axios', () => ({
-  default: {
-    create: mock(() => ({
-      get: mock(),
-      post: mock(),
-    })),
-    isAxiosError: mock((error: any) => error.isAxiosError === true),
-  },
-}));
+// Store original axios methods
+const originalAxiosCreate = axios.create;
+const originalAxiosIsAxiosError = axios.isAxiosError;
 
 describe('PureMdClient', () => {
   let client: PureMdClient;
@@ -22,13 +15,22 @@ describe('PureMdClient', () => {
       get: mock(),
       post: mock(),
     };
-    (axios.create as any).mockReturnValue(mockAxiosInstance);
+    
+    // Mock axios.create and isAxiosError
+    axios.create = mock(() => mockAxiosInstance) as any;
+    axios.isAxiosError = mock((error: any) => error?.isAxiosError === true) as any;
+  });
+
+  afterEach(() => {
+    // Restore original axios methods
+    axios.create = originalAxiosCreate;
+    axios.isAxiosError = originalAxiosIsAxiosError;
   });
 
   describe('constructor', () => {
     it('should initialize with default config', () => {
       client = new PureMdClient();
-      expect(axios.create).toHaveBeenCalledWith({
+      expect((axios.create as any)).toHaveBeenCalledWith({
         baseURL: 'https://pure.md',
         headers: {},
         timeout: 30000,
@@ -37,7 +39,7 @@ describe('PureMdClient', () => {
 
     it('should use provided API key', () => {
       client = new PureMdClient({ apiKey: 'test-key' });
-      expect(axios.create).toHaveBeenCalledWith({
+      expect((axios.create as any)).toHaveBeenCalledWith({
         baseURL: 'https://pure.md',
         headers: { 'x-puremd-api-token': 'test-key' },
         timeout: 30000,
@@ -46,7 +48,7 @@ describe('PureMdClient', () => {
 
     it('should use custom base URL', () => {
       client = new PureMdClient({ baseUrl: 'https://custom.pure.md' });
-      expect(axios.create).toHaveBeenCalledWith({
+      expect((axios.create as any)).toHaveBeenCalledWith({
         baseURL: 'https://custom.pure.md',
         headers: {},
         timeout: 30000,

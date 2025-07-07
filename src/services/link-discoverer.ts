@@ -12,10 +12,15 @@ export interface DiscoveredLinks {
   crawledAt: string;
 }
 
+export interface LinkFilterOptions {
+  includePatterns?: string[];
+  excludePatterns?: string[];
+}
+
 export class LinkDiscoverer {
   constructor(private options: LinkDiscoveryOptions) {}
 
-  async discoverLinks(url: string): Promise<DiscoveredLinks> {
+  async discoverLinks(url: string, filterOptions?: LinkFilterOptions): Promise<DiscoveredLinks> {
     try {
       // Fetch the HTML content
       const response = await axios.get(url, {
@@ -29,7 +34,7 @@ export class LinkDiscoverer {
       const $ = cheerio.load(html);
 
       // Extract all links
-      const links = this.extractLinks($, url);
+      const links = this.extractLinks($, url, filterOptions);
 
       return {
         url,
@@ -44,7 +49,7 @@ export class LinkDiscoverer {
     }
   }
 
-  private extractLinks($: cheerio.CheerioAPI, baseUrl: string): string[] {
+  private extractLinks($: cheerio.CheerioAPI, baseUrl: string, filterOptions?: LinkFilterOptions): string[] {
     const links = new Set<string>();
 
     $('a[href]').each((_, el) => {
@@ -60,13 +65,21 @@ export class LinkDiscoverer {
         return;
       }
 
+      // Skip malformed URLs that start with :// or other invalid patterns
+      if (href.startsWith('://') || href.startsWith('//')) {
+        return;
+      }
+
       try {
         // Convert relative URLs to absolute
         const absoluteUrl = new URL(href, baseUrl).toString();
         
         // Only add http(s) URLs
         if (absoluteUrl.startsWith('http://') || absoluteUrl.startsWith('https://')) {
-          links.add(absoluteUrl);
+          // Apply pattern filtering if provided
+          if (this.shouldIncludeLink(absoluteUrl, filterOptions)) {
+            links.add(absoluteUrl);
+          }
         }
       } catch {
         // Invalid URL, skip it
@@ -74,5 +87,47 @@ export class LinkDiscoverer {
     });
 
     return Array.from(links);
+  }
+
+  private shouldIncludeLink(url: string, filterOptions?: LinkFilterOptions): boolean {
+    if (!filterOptions) {
+      return true;
+    }
+
+    const { includePatterns, excludePatterns } = filterOptions;
+
+    // Check include patterns
+    if (includePatterns && includePatterns.length > 0) {
+      const matchesInclude = includePatterns.some(pattern => {
+        try {
+          return new RegExp(pattern).test(url);
+        } catch {
+          console.warn(`Invalid include pattern: ${pattern}`);
+          return false;
+        }
+      });
+      
+      if (!matchesInclude) {
+        return false;
+      }
+    }
+    
+    // Check exclude patterns
+    if (excludePatterns && excludePatterns.length > 0) {
+      const matchesExclude = excludePatterns.some(pattern => {
+        try {
+          return new RegExp(pattern).test(url);
+        } catch {
+          console.warn(`Invalid exclude pattern: ${pattern}`);
+          return false;
+        }
+      });
+      
+      if (matchesExclude) {
+        return false;
+      }
+    }
+    
+    return true;
   }
 }
