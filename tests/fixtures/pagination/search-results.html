@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Results - "javascript tutorial"</title>
+</head>
+<body>
+    <header>
+        <h1>Developer Search</h1>
+        <form action="/search" method="get">
+            <input type="text" name="q" value="javascript tutorial" placeholder="Search...">
+            <button type="submit">Search</button>
+        </form>
+    </header>
+    
+    <main>
+        <div class="search-info">
+            <h2>Search Results for "javascript tutorial"</h2>
+            <p>About 1,234 results (0.42 seconds)</p>
+            
+            <div class="filters">
+                <label>Sort by: 
+                    <select name="sort" onchange="window.location.href=this.value">
+                        <option value="/search?q=javascript+tutorial&sort=relevance" selected>Relevance</option>
+                        <option value="/search?q=javascript+tutorial&sort=date">Date</option>
+                        <option value="/search?q=javascript+tutorial&sort=popularity">Popularity</option>
+                    </select>
+                </label>
+                
+                <label>Time: 
+                    <select name="time" onchange="window.location.href=this.value">
+                        <option value="/search?q=javascript+tutorial">Any time</option>
+                        <option value="/search?q=javascript+tutorial&time=day">Past 24 hours</option>
+                        <option value="/search?q=javascript+tutorial&time=week">Past week</option>
+                        <option value="/search?q=javascript+tutorial&time=month">Past month</option>
+                        <option value="/search?q=javascript+tutorial&time=year">Past year</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+        
+        <div class="search-results">
+            <article class="result">
+                <h3><a href="/tutorial/js-basics">JavaScript Basics - Complete Beginner's Guide</a></h3>
+                <p class="url">www.example.com/tutorial/js-basics</p>
+                <p class="snippet">Learn <mark>JavaScript</mark> from scratch with this comprehensive <mark>tutorial</mark>. Perfect for beginners who want to understand the fundamentals...</p>
+                <p class="meta">Updated: 2 days ago | Views: 45,230</p>
+            </article>
+            
+            <article class="result">
+                <h3><a href="/course/modern-javascript">Modern JavaScript Tutorial - ES6 and Beyond</a></h3>
+                <p class="url">www.example.com/course/modern-javascript</p>
+                <p class="snippet">A complete <mark>JavaScript tutorial</mark> covering modern ES6+ features, async/await, modules, and more...</p>
+                <p class="meta">Updated: 1 week ago | Views: 32,150</p>
+            </article>
+            
+            <article class="result">
+                <h3><a href="/guide/javascript-dom">JavaScript DOM Manipulation Tutorial</a></h3>
+                <p class="url">www.example.com/guide/javascript-dom</p>
+                <p class="snippet">Master DOM manipulation with <mark>JavaScript</mark> in this hands-on <mark>tutorial</mark>. Learn to create dynamic web pages...</p>
+                <p class="meta">Updated: 3 days ago | Views: 28,420</p>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <nav class="search-pagination">
+            <table>
+                <tr>
+                    <td class="prev-link"></td>
+                    <td class="page-numbers">
+                        <span class="page current">1</span>
+                        <a href="/search?q=javascript+tutorial&start=10" class="page">2</a>
+                        <a href="/search?q=javascript+tutorial&start=20" class="page">3</a>
+                        <a href="/search?q=javascript+tutorial&start=30" class="page">4</a>
+                        <a href="/search?q=javascript+tutorial&start=40" class="page">5</a>
+                        <a href="/search?q=javascript+tutorial&start=50" class="page">6</a>
+                        <a href="/search?q=javascript+tutorial&start=60" class="page">7</a>
+                        <a href="/search?q=javascript+tutorial&start=70" class="page">8</a>
+                        <a href="/search?q=javascript+tutorial&start=80" class="page">9</a>
+                        <a href="/search?q=javascript+tutorial&start=90" class="page">10</a>
+                    </td>
+                    <td class="next-link">
+                        <a href="/search?q=javascript+tutorial&start=10" class="next">Next</a>
+                    </td>
+                </tr>
+            </table>
+            
+            <!-- Alternative pagination format -->
+            <div class="alt-pagination" style="display:none;">
+                <a href="/search?q=javascript+tutorial&p=2" rel="next">Next Page</a>
+            </div>
+        </nav>
+    </footer>
+</body>
+</html>

@@ -654,6 +654,219 @@ Use when pages have "Next" or "Older Posts" links:
 }
 ```
 
+### Additional Pagination Examples
+
+#### E-commerce Category Pages
+
+```json
+{
+  "archives": [{
+    "name": "Product Catalog",
+    "sources": {
+      "url": "https://shop.example.com/category/electronics",
+      "strategy": "pagination",
+      "pagination": {
+        "pageParam": "p",
+        "startPage": 1,
+        "maxPages": 50,
+        "perPageParam": "per_page"
+      }
+    },
+    "output": {
+      "directory": "./archive/products",
+      "format": "json"
+    }
+  }]
+}
+```
+
+#### Search Results with Offset
+
+```json
+{
+  "archives": [{
+    "name": "Search Results Archive",
+    "sources": {
+      "url": "https://search.example.com/results?q=javascript",
+      "strategy": "pagination",
+      "pagination": {
+        "pageParam": "start",
+        "startPage": 0,
+        "maxPages": 20,
+        "pageIncrement": 10
+      }
+    },
+    "output": {
+      "directory": "./archive/search-results"
+    }
+  }]
+}
+```
+
+#### Forum Threads with Offset-Based Pagination
+
+```json
+{
+  "archives": [{
+    "name": "Forum Archive",
+    "sources": {
+      "url": "https://forum.example.com/category/general",
+      "strategy": "pagination",
+      "pagination": {
+        "pageParam": "offset",
+        "startPage": 0,
+        "maxPages": 100,
+        "pageIncrement": 20
+      },
+      "includePatterns": ["*/topic/*"],
+      "excludePatterns": ["*/user/*", "*/admin/*"]
+    },
+    "output": {
+      "directory": "./archive/forum"
+    }
+  }]
+}
+```
+
+#### News Site with Load More Button
+
+```json
+{
+  "archives": [{
+    "name": "News Archive",
+    "sources": {
+      "url": "https://news.example.com/latest",
+      "strategy": "pagination",
+      "pagination": {
+        "nextLinkSelector": "a.load-more-link, button.load-more[onclick*='href']",
+        "maxPages": 50
+      }
+    },
+    "output": {
+      "directory": "./archive/news",
+      "format": "markdown"
+    }
+  }]
+}
+```
+
+#### Infinite Scroll Gallery
+
+```json
+{
+  "archives": [{
+    "name": "Photo Gallery",
+    "sources": {
+      "url": "https://gallery.example.com/photos",
+      "strategy": "pagination",
+      "pagination": {
+        "nextLinkSelector": "#infinite-scroll-next, .next-batch, noscript a[href*='batch']",
+        "maxPages": 100
+      }
+    },
+    "output": {
+      "directory": "./archive/gallery",
+      "format": "json"
+    }
+  }]
+}
+```
+
+#### Documentation with Section-Based Navigation
+
+```json
+{
+  "archives": [{
+    "name": "API Documentation",
+    "sources": {
+      "url": "https://api.example.com/docs/reference",
+      "strategy": "pagination",
+      "pagination": {
+        "pageParam": "section",
+        "startPage": 1,
+        "maxPages": 10
+      }
+    },
+    "output": {
+      "directory": "./archive/api-docs"
+    }
+  }]
+}
+```
+
+#### Blog with Date-Based URLs
+
+```json
+{
+  "archives": [{
+    "name": "Blog Archive 2024",
+    "sources": {
+      "url": "https://blog.example.com/2024/01",
+      "strategy": "pagination",
+      "pagination": {
+        "pagePattern": "https://blog.example.com/2024/01/page/{page}",
+        "startPage": 1,
+        "maxPages": 25
+      },
+      "includePatterns": ["*/2024/01/*"],
+      "excludePatterns": ["*/tag/*", "*/author/*"]
+    },
+    "output": {
+      "directory": "./archive/blog-2024-01"
+    }
+  }]
+}
+```
+
+#### Hybrid Pagination (Multiple Selectors)
+
+```json
+{
+  "archives": [{
+    "name": "Complex Site Archive",
+    "sources": {
+      "url": "https://complex.example.com/content",
+      "strategy": "pagination",
+      "pagination": {
+        "nextLinkSelector": "a.next, a[rel='next'], .pagination a:last-child, button.more",
+        "maxPages": 75
+      }
+    },
+    "output": {
+      "directory": "./archive/complex-site"
+    }
+  }]
+}
+```
+
+### Pagination Tips and Best Practices
+
+1. **Choose the Right Strategy**:
+   - Use `pagePattern` when URLs follow a predictable pattern
+   - Use `pageParam` for query parameter-based pagination
+   - Use `nextLinkSelector` for following "Next" or "Load More" links
+
+2. **Selector Optimization**:
+   - Use specific selectors to avoid false matches
+   - Combine multiple selectors with commas for fallbacks
+   - Test selectors in browser DevTools first
+
+3. **Performance Considerations**:
+   - Set appropriate `maxPages` limits to avoid infinite loops
+   - Use `delay` between requests to respect rate limits
+   - Adjust `maxConcurrency` based on site capacity
+
+4. **Common Patterns**:
+   - Offset pagination: `pageParam: "offset"` with `pageIncrement`
+   - Page numbers: `pageParam: "page"` or `pageParam: "p"`
+   - Load more buttons: `nextLinkSelector: "button.load-more, a.load-more"`
+   - Infinite scroll: Look for hidden fallback links or noscript tags
+
+5. **Debugging**:
+   - Start with small `maxPages` values during testing
+   - Use browser DevTools to inspect pagination elements
+   - Check for JavaScript-rendered pagination links
+
 ## CLI Reference
 
 ### Commands

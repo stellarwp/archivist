@@ -1,0 +1,53 @@
+{
+  "archives": [
+    {
+      "name": "Developer Forum - All Categories",
+      "sources": [
+        {
+          "url": "https://forum.example.com/category/general",
+          "strategy": "pagination",
+          "pagination": {
+            "pageParam": "offset",
+            "startPage": 0,
+            "maxPages": 50,
+            "pageIncrement": 20
+          }
+        },
+        {
+          "url": "https://forum.example.com/category/javascript",
+          "strategy": "pagination",
+          "pagination": {
+            "pageParam": "offset",
+            "startPage": 0,
+            "maxPages": 75,
+            "pageIncrement": 20
+          }
+        },
+        {
+          "url": "https://forum.example.com/category/python",
+          "strategy": "pagination",
+          "pagination": {
+            "pageParam": "offset",
+            "startPage": 0,
+            "maxPages": 60,
+            "pageIncrement": 20
+          }
+        }
+      ],
+      "output": {
+        "directory": "./archive/forum",
+        "format": "markdown",
+        "fileNaming": "title-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 1,
+    "delay": 5000,
+    "userAgent": "Archivist/1.0 (Forum Archiver)",
+    "timeout": 60000
+  },
+  "pure": {
+    "apiKey": "${PURE_API_KEY}"
+  }
+}

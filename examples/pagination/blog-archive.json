@@ -1,0 +1,41 @@
+{
+  "archives": [
+    {
+      "name": "Tech Blog Archive",
+      "sources": {
+        "url": "https://techblog.example.com/archive",
+        "strategy": "pagination",
+        "pagination": {
+          "pagePattern": "https://techblog.example.com/archive/page/{page}",
+          "startPage": 1,
+          "maxPages": 50
+        },
+        "includePatterns": [
+          "*/blog/*",
+          "*/article/*",
+          "*/post/*"
+        ],
+        "excludePatterns": [
+          "*/author/*",
+          "*/tag/*",
+          "*/category/*",
+          "*/comment/*"
+        ]
+      },
+      "output": {
+        "directory": "./archive/techblog",
+        "format": "markdown",
+        "fileNaming": "title-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 3,
+    "delay": 2000,
+    "userAgent": "Archivist/1.0 (Blog Archiver)",
+    "timeout": 30000
+  },
+  "pure": {
+    "apiKey": "${PURE_API_KEY}"
+  }
+}

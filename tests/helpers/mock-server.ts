@@ -136,6 +136,108 @@ export async function startMockServer(): Promise<MockServerResult> {
         `, { headers: { 'Content-Type': 'text/html' } });
       }
       
+      // E-commerce category with query parameters
+      if (url.pathname === '/shop/electronics') {
+        const page = parseInt(url.searchParams.get('p') || '1');
+        const perPage = parseInt(url.searchParams.get('per_page') || '20');
+        return new Response(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Electronics - Page ${page}</title></head>
+          <body>
+            <h1>Electronics Category - Page ${page}</h1>
+            <p>Showing ${((page-1) * perPage) + 1}-${page * perPage} of 523 products</p>
+            <div class="pagination">
+              ${page > 1 ? `<a href="/shop/electronics?p=${page-1}" class="prev">Previous</a>` : ''}
+              <a href="/shop/electronics?p=${page+1}" class="next">Next</a>
+            </div>
+          </body>
+          </html>
+        `, { headers: { 'Content-Type': 'text/html' } });
+      }
+      
+      // Documentation with hybrid pagination
+      if (url.pathname === '/docs/guides') {
+        const section = url.searchParams.get('section') || '1';
+        return new Response(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Documentation Guides - Section ${section}</title></head>
+          <body>
+            <h1>Developer Guides - Section ${section}</h1>
+            <article>Guide content for section ${section}</article>
+            <nav class="pagination">
+              <a href="/docs/guides?section=1" ${section === '1' ? 'class="active"' : ''}>1</a>
+              <a href="/docs/guides?section=2" ${section === '2' ? 'class="active"' : ''}>2</a>
+              <a href="/docs/guides?section=3" ${section === '3' ? 'class="active"' : ''}>3</a>
+              ${section !== '3' ? `<a href="/docs/guides?section=${parseInt(section)+1}" rel="next">Next Section →</a>` : ''}
+            </nav>
+          </body>
+          </html>
+        `, { headers: { 'Content-Type': 'text/html' } });
+      }
+      
+      // News with load more button
+      if (url.pathname === '/news/latest') {
+        const loaded = parseInt(url.searchParams.get('loaded') || '5');
+        const hasMore = loaded < 50;
+        return new Response(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Latest News</title></head>
+          <body>
+            <h1>Latest News</h1>
+            <p>Showing ${loaded} articles</p>
+            ${hasMore ? `
+              <button onclick="window.location.href='/news/latest?loaded=${loaded + 5}'">Load More</button>
+              <a href="/news/latest?loaded=${loaded + 5}" class="load-more-link">Load More Articles</a>
+            ` : '<p>No more articles</p>'}
+          </body>
+          </html>
+        `, { headers: { 'Content-Type': 'text/html' } });
+      }
+      
+      // Gallery with infinite scroll fallback
+      if (url.pathname === '/gallery/photos') {
+        const batch = parseInt(url.searchParams.get('batch') || '1');
+        const hasMore = batch < 10;
+        return new Response(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Photo Gallery - Batch ${batch}</title></head>
+          <body>
+            <h1>Photo Gallery - Batch ${batch}</h1>
+            <div class="photos">Photos from batch ${batch}</div>
+            <noscript>
+              ${hasMore ? `<a href="/gallery/photos?batch=${batch + 1}" class="next-batch">Next Batch</a>` : ''}
+            </noscript>
+            <div style="display:none;">
+              ${hasMore ? `<a href="/gallery/photos?batch=${batch + 1}" id="infinite-scroll-next">Load More</a>` : ''}
+            </div>
+          </body>
+          </html>
+        `, { headers: { 'Content-Type': 'text/html' } });
+      }
+      
+      // Blog date-based URLs
+      if (url.pathname.match(/^\/blog\/\d{4}\/\d{2}(\/page\/\d+)?$/)) {
+        const match = url.pathname.match(/^\/blog\/(\d{4})\/(\d{2})(\/page\/(\d+))?$/);
+        const year = match?.[1];
+        const month = match?.[2];
+        const page = match?.[4] || '0';
+        
+        return new Response(`
+          <!DOCTYPE html>
+          <html>
+          <head><title>Blog Archive - ${year}/${month} ${page !== '0' ? `Page ${page}` : ''}</title></head>
+          <body>
+            <h1>Blog Archive - ${year}/${month} ${page !== '0' ? `Page ${page}` : ''}</h1>
+            <article>Blog posts for ${year}/${month} ${page !== '0' ? `page ${page}` : ''}</article>
+          </body>
+          </html>
+        `, { headers: { 'Content-Type': 'text/html' } });
+      }
+      
       // Default 404
       return new Response('Not Found', { status: 404 });
     },

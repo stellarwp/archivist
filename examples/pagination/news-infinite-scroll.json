@@ -1,0 +1,51 @@
+{
+  "archives": [
+    {
+      "name": "Tech News Archive",
+      "sources": {
+        "url": "https://technews.example.com/latest",
+        "strategy": "pagination",
+        "pagination": {
+          "nextLinkSelector": ".load-more-btn, a.load-more, #load-more-link, [data-load-more]",
+          "maxPages": 100
+        },
+        "includePatterns": [
+          "*/article/*",
+          "*/story/*",
+          "*/news/*"
+        ],
+        "excludePatterns": [
+          "*/sponsored/*",
+          "*/advertisement/*"
+        ]
+      },
+      "output": {
+        "directory": "./archive/tech-news",
+        "format": "markdown",
+        "fileNaming": "title-based"
+      }
+    },
+    {
+      "name": "Photo Gallery with Infinite Scroll",
+      "sources": {
+        "url": "https://photos.example.com/gallery/nature",
+        "strategy": "pagination",
+        "pagination": {
+          "nextLinkSelector": "#infinite-scroll-trigger, .next-batch-link, noscript a[href*='page'], [data-next-url]",
+          "maxPages": 200
+        }
+      },
+      "output": {
+        "directory": "./archive/photo-gallery",
+        "format": "json",
+        "fileNaming": "hash-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 2,
+    "delay": 2500,
+    "userAgent": "Archivist/1.0 (Media Crawler)",
+    "timeout": 45000
+  }
+}

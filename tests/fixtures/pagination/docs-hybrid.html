@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Documentation - Tutorials</title>
+</head>
+<body>
+    <header>
+        <h1>Developer Documentation</h1>
+        <nav class="main-nav">
+            <a href="/docs/getting-started">Getting Started</a>
+            <a href="/docs/tutorials" class="active">Tutorials</a>
+            <a href="/docs/api-reference">API Reference</a>
+            <a href="/docs/examples">Examples</a>
+        </nav>
+    </header>
+    
+    <aside class="sidebar">
+        <h3>Tutorial Categories</h3>
+        <ul>
+            <li><a href="/docs/tutorials/basics">Basics</a></li>
+            <li><a href="/docs/tutorials/intermediate">Intermediate</a></li>
+            <li><a href="/docs/tutorials/advanced">Advanced</a></li>
+            <li><a href="/docs/tutorials/video">Video Tutorials</a></li>
+        </ul>
+    </aside>
+    
+    <main>
+        <h2>All Tutorials</h2>
+        
+        <div class="tutorial-grid">
+            <article class="tutorial-card">
+                <h3><a href="/docs/tutorial/getting-started-with-react">Getting Started with React</a></h3>
+                <p>Learn the fundamentals of React including components, state, and props.</p>
+                <span class="difficulty">Beginner</span>
+            </article>
+            
+            <article class="tutorial-card">
+                <h3><a href="/docs/tutorial/building-rest-api">Building a REST API with Node.js</a></h3>
+                <p>Create a full-featured REST API using Express and MongoDB.</p>
+                <span class="difficulty">Intermediate</span>
+            </article>
+            
+            <article class="tutorial-card">
+                <h3><a href="/docs/tutorial/typescript-best-practices">TypeScript Best Practices</a></h3>
+                <p>Advanced TypeScript patterns and practices for large applications.</p>
+                <span class="difficulty">Advanced</span>
+            </article>
+            
+            <article class="tutorial-card">
+                <h3><a href="/docs/tutorial/docker-deployment">Docker Deployment Guide</a></h3>
+                <p>Deploy your applications using Docker containers and orchestration.</p>
+                <span class="difficulty">Intermediate</span>
+            </article>
+        </div>
+    </main>
+    
+    <footer>
+        <nav class="pagination hybrid">
+            <!-- Numbered pagination -->
+            <div class="page-numbers">
+                <a href="/docs/tutorials?page=1" class="page-num current">1</a>
+                <a href="/docs/tutorials?page=2" class="page-num">2</a>
+                <a href="/docs/tutorials?page=3" class="page-num">3</a>
+                <span class="ellipsis">...</span>
+                <a href="/docs/tutorials?page=10" class="page-num">10</a>
+            </div>
+            
+            <!-- Next/Previous links -->
+            <div class="nav-links">
+                <span class="prev disabled">← Previous</span>
+                <a href="/docs/tutorials?page=2" class="next" rel="next">Next →</a>
+            </div>
+            
+            <!-- Items per page selector -->
+            <div class="per-page">
+                <label>Show: 
+                    <select onchange="window.location.href=this.value">
+                        <option value="/docs/tutorials?page=1&per_page=10" selected>10</option>
+                        <option value="/docs/tutorials?page=1&per_page=20">20</option>
+                        <option value="/docs/tutorials?page=1&per_page=50">50</option>
+                    </select>
+                    per page
+                </label>
+            </div>
+        </nav>
+    </footer>
+</body>
+</html>

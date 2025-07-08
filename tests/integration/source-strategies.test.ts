@@ -215,4 +215,212 @@ describe('Source Strategies Integration', () => {
       expect(metadata.results.length).toBeGreaterThan(3);
     });
   });
+  
+  describe('Advanced Pagination Examples', () => {
+    it('should handle e-commerce pagination with custom page parameter', async () => {
+      const config: ArchivistConfig = {
+        archives: [{
+          name: 'E-commerce Products',
+          sources: {
+            url: `${mockServerUrl}/shop/electronics`,
+            strategy: 'pagination',
+            pagination: {
+              pageParam: 'p',
+              startPage: 1,
+              maxPages: 3,
+            },
+          },
+          output: {
+            directory: testOutputDir,
+            format: 'json',
+            fileNaming: 'url-based',
+          },
+        }],
+        crawl: {
+          maxConcurrency: 1,
+          delay: 50,
+          userAgent: 'Archivist Test',
+          timeout: 5000,
+        },
+      };
+      
+      const crawler = new WebCrawler(config);
+      await crawler.crawlAll();
+      
+      const metadataPath = join(testOutputDir, 'archivist-metadata.json');
+      const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
+      
+      expect(metadata.results.length).toBe(4); // base + 3 pages
+      const urls = metadata.results.map((r: any) => r.url);
+      expect(urls).toContain(`${mockServerUrl}/shop/electronics`);
+      expect(urls).toContain(`${mockServerUrl}/shop/electronics?p=1`);
+      expect(urls).toContain(`${mockServerUrl}/shop/electronics?p=2`);
+      expect(urls).toContain(`${mockServerUrl}/shop/electronics?p=3`);
+    });
+    
+    it('should handle documentation with section-based pagination', async () => {
+      const config: ArchivistConfig = {
+        archives: [{
+          name: 'Documentation Guides',
+          sources: {
+            url: `${mockServerUrl}/docs/guides`,
+            strategy: 'pagination',
+            pagination: {
+              pageParam: 'section',
+              startPage: 1,
+              maxPages: 3,
+            },
+          },
+          output: {
+            directory: testOutputDir,
+            format: 'markdown',
+            fileNaming: 'url-based',
+          },
+        }],
+        crawl: {
+          maxConcurrency: 1,
+          delay: 50,
+          userAgent: 'Archivist Test',
+          timeout: 5000,
+        },
+      };
+      
+      const crawler = new WebCrawler(config);
+      await crawler.crawlAll();
+      
+      const metadataPath = join(testOutputDir, 'archivist-metadata.json');
+      const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
+      
+      const urls = metadata.results.map((r: any) => r.url);
+      expect(urls).toContain(`${mockServerUrl}/docs/guides?section=1`);
+      expect(urls).toContain(`${mockServerUrl}/docs/guides?section=2`);
+      expect(urls).toContain(`${mockServerUrl}/docs/guides?section=3`);
+    });
+    
+    it('should handle load more button pagination', async () => {
+      const config: ArchivistConfig = {
+        archives: [{
+          name: 'News Articles',
+          sources: {
+            url: `${mockServerUrl}/news/latest`,
+            strategy: 'pagination',
+            pagination: {
+              nextLinkSelector: 'a.load-more-link',
+              maxPages: 5,
+            },
+          },
+          output: {
+            directory: testOutputDir,
+            format: 'markdown',
+            fileNaming: 'title-based',
+          },
+        }],
+        crawl: {
+          maxConcurrency: 1,
+          delay: 50,
+          userAgent: 'Archivist Test',
+          timeout: 5000,
+        },
+      };
+      
+      const crawler = new WebCrawler(config);
+      await crawler.crawlAll();
+      
+      const metadataPath = join(testOutputDir, 'archivist-metadata.json');
+      const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
+      
+      // Should follow load more links
+      expect(metadata.results.length).toBeGreaterThan(1);
+      const urls = metadata.results.map((r: any) => r.url);
+      expect(urls[0]).toBe(`${mockServerUrl}/news/latest`);
+      expect(urls.some((url: string) => url.includes('loaded='))).toBe(true);
+    });
+    
+    it('should handle infinite scroll with fallback links', async () => {
+      const config: ArchivistConfig = {
+        archives: [{
+          name: 'Photo Gallery',
+          sources: {
+            url: `${mockServerUrl}/gallery/photos`,
+            strategy: 'pagination',
+            pagination: {
+              nextLinkSelector: '#infinite-scroll-next, .next-batch',
+              maxPages: 4,
+            },
+          },
+          output: {
+            directory: testOutputDir,
+            format: 'json',
+            fileNaming: 'hash-based',
+          },
+        }],
+        crawl: {
+          maxConcurrency: 1,
+          delay: 50,
+          userAgent: 'Archivist Test',
+          timeout: 5000,
+        },
+      };
+      
+      const crawler = new WebCrawler(config);
+      await crawler.crawlAll();
+      
+      const metadataPath = join(testOutputDir, 'archivist-metadata.json');
+      const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
+      
+      expect(metadata.results.length).toBe(4);
+      const urls = metadata.results.map((r: any) => r.url);
+      
+      // Verify batch progression
+      for (let i = 0; i < urls.length; i++) {
+        if (i === 0) {
+          expect(urls[i]).toBe(`${mockServerUrl}/gallery/photos`);
+        } else {
+          expect(urls[i]).toContain(`batch=${i + 1}`);
+        }
+      }
+    });
+    
+    it('should handle complex pattern with path segments', async () => {
+      const config: ArchivistConfig = {
+        archives: [{
+          name: 'Blog Archive by Date',
+          sources: {
+            url: `${mockServerUrl}/blog/2024/01`,
+            strategy: 'pagination',
+            pagination: {
+              pagePattern: `${mockServerUrl}/blog/2024/01/page/{page}`,
+              startPage: 1,
+              maxPages: 5,
+            },
+          },
+          output: {
+            directory: testOutputDir,
+            format: 'markdown',
+            fileNaming: 'url-based',
+          },
+        }],
+        crawl: {
+          maxConcurrency: 2,
+          delay: 50,
+          userAgent: 'Archivist Test',
+          timeout: 5000,
+        },
+      };
+      
+      const crawler = new WebCrawler(config);
+      await crawler.crawlAll();
+      
+      const metadataPath = join(testOutputDir, 'archivist-metadata.json');
+      const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
+      
+      expect(metadata.results.length).toBe(6); // base + 5 pages
+      const urls = metadata.results.map((r: any) => r.url);
+      
+      expect(urls[0]).toBe(`${mockServerUrl}/blog/2024/01`);
+      for (let i = 1; i <= 5; i++) {
+        expect(urls).toContain(`${mockServerUrl}/blog/2024/01/page/${i}`);
+      }
+    });
+  });
 });

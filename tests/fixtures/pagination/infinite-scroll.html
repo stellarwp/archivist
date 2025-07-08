@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Photo Gallery - Infinite Scroll</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .photo-item { background: #f0f0f0; padding: 10px; }
+        .sentinel { height: 1px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Photo Gallery</h1>
+        <nav>
+            <a href="/gallery/popular">Popular</a>
+            <a href="/gallery/recent" class="active">Recent</a>
+            <a href="/gallery/featured">Featured</a>
+        </nav>
+    </header>
+    
+    <main>
+        <div class="photo-grid" id="photo-container">
+            <article class="photo-item">
+                <a href="/photo/sunset-beach-001">
+                    <img src="/thumb/sunset-beach-001.jpg" alt="Sunset at the beach">
+                    <h3>Sunset at the Beach</h3>
+                </a>
+                <p>By photographer123</p>
+            </article>
+            
+            <article class="photo-item">
+                <a href="/photo/mountain-peak-002">
+                    <img src="/thumb/mountain-peak-002.jpg" alt="Mountain peak">
+                    <h3>Mountain Peak</h3>
+                </a>
+                <p>By naturelover</p>
+            </article>
+            
+            <article class="photo-item">
+                <a href="/photo/city-lights-003">
+                    <img src="/thumb/city-lights-003.jpg" alt="City lights at night">
+                    <h3>City Lights</h3>
+                </a>
+                <p>By urbanexplorer</p>
+            </article>
+            
+            <article class="photo-item">
+                <a href="/photo/forest-path-004">
+                    <img src="/thumb/forest-path-004.jpg" alt="Forest path">
+                    <h3>Forest Path</h3>
+                </a>
+                <p>By hikingfan</p>
+            </article>
+        </div>
+        
+        <!-- Invisible sentinel element for infinite scroll -->
+        <div class="sentinel" id="scroll-sentinel"></div>
+        
+        <!-- Fallback pagination for crawlers and no-JS -->
+        <noscript>
+            <div class="pagination">
+                <a href="/gallery/recent?batch=2" class="next-batch">Load Next Batch →</a>
+            </div>
+        </noscript>
+        
+        <!-- Hidden link for crawlers -->
+        <div style="display:none;">
+            <a href="/gallery/recent?batch=2" id="next-batch-link">Next Batch</a>
+        </div>
+    </main>
+    
+    <footer>
+        <div class="load-status">
+            <span id="loaded-count">Showing 4 photos</span>
+            <span id="loading-indicator" style="display:none;">Loading more...</span>
+        </div>
+        
+        <!-- Data attributes for JS pagination -->
+        <div id="pagination-data" 
+             data-next-url="/gallery/recent?batch=2"
+             data-total-items="2847"
+             data-items-per-batch="20"
+             data-current-batch="1">
+        </div>
+    </footer>
+    
+    <script>
+        // Infinite scroll implementation would go here
+        const sentinel = document.getElementById('scroll-sentinel');
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                // Load more photos
+                const nextUrl = document.getElementById('pagination-data').dataset.nextUrl;
+                console.log('Would load:', nextUrl);
+            }
+        });
+        observer.observe(sentinel);
+    </script>
+</body>
+</html>
