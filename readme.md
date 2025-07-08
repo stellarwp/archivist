@@ -22,16 +22,86 @@ A Bun-based TypeScript tool for archiving web content to use as LLM context. Use
 
 ## Installation
 
-```bash
-# Install from NPM
-npm install -g @stellarwp/archivist
-# or
-bun add -g @stellarwp/archivist
+### Global Installation
 
-# Or clone for development
+```bash
+# Install globally with npm
+npm install -g @stellarwp/archivist
+
+# Or install globally with Bun
+bun add -g @stellarwp/archivist
+```
+
+### As a Project Dependency
+
+```bash
+# Add to your project with npm
+npm install @stellarwp/archivist
+
+# Or add with Bun
+bun add @stellarwp/archivist
+```
+
+### Development
+
+```bash
 git clone https://github.com/stellarwp/archivist.git
 cd archivist
 bun install
+```
+
+## Usage
+
+### When Installed Globally
+
+```bash
+# Initialize configuration
+archivist init
+
+# Run the crawler
+archivist crawl
+
+# View help
+archivist --help
+```
+
+### When Installed as a Dependency
+
+When using Bun, the binary is not added to PATH automatically. You have several options:
+
+```bash
+# Option 1: Use bun run
+bun run archivist init
+bun run archivist crawl
+
+# Option 2: Use bunx
+bunx archivist init
+bunx archivist crawl
+
+# Option 3: Add to package.json scripts
+# In your package.json:
+{
+  "scripts": {
+    "archive": "archivist crawl",
+    "archive:init": "archivist init"
+  }
+}
+# Then run:
+bun run archive
+```
+
+### When Using npm
+
+With npm, the binary is automatically available:
+
+```bash
+# Via npx
+npx archivist init
+npx archivist crawl
+
+# Or if installed globally
+archivist init
+archivist crawl
 ```
 
 ## Quick Start
@@ -43,14 +113,28 @@ bun install
 
 2. **Initialize configuration**:
    ```bash
+   # Global installation
    archivist init
+   
+   # As dependency with Bun
+   bun run archivist init
+   
+   # As dependency with npm
+   npx archivist init
    ```
 
 3. **Edit `archivist.config.json`** with your URLs
 
 4. **Run the crawler**:
    ```bash
+   # Global installation
    archivist crawl
+   
+   # As dependency with Bun
+   bun run archivist crawl
+   
+   # As dependency with npm
+   npx archivist crawl
    ```
 
 ## Configuration
