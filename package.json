@@ -40,6 +40,8 @@
     "test:coverage": "bun test --coverage",
     "test:types": "bunx tsc --noEmit",
     "test:all": "bunx tsc --noEmit && bun test",
+    "test:install": "bun test tests/integration/package-installation.test.ts",
+    "test:cli": "bun test tests/integration/cli-commands.test.ts",
     "lint": "bunx tsc --noEmit",
     "prepublishOnly": "bunx tsc --noEmit && bun test",
     "build:action": "node build/build-action.js"

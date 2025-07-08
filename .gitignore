@@ -38,3 +38,6 @@ archive/
 
 # Test output directories
 test-*/
+archivist-test-*/
+archivist-local-test-*/
+archivist-cli-test-*/
