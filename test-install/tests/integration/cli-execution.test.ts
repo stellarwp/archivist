@@ -48,7 +48,9 @@ describe('CLI Execution', () => {
   });
 
   it('should have executable permissions', async () => {
-    const stats = await Bun.file(cliPath).stat();
+    // Use fs.statSync for compatibility with Bun 1.1.0
+    const { statSync } = await import('fs');
+    const stats = statSync(cliPath);
     // Check if file exists and is accessible
     expect(stats.size).toBeGreaterThan(0);
   });
