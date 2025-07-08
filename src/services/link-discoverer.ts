@@ -79,12 +79,19 @@ export class LinkDiscoverer {
   async discoverLinks(url: string, filterOptions?: LinkFilterOptions): Promise<DiscoveredLinks> {
     try {
       // Fetch the HTML content
-      const response = await this.axiosInstance.get(url, getAxiosConfig({
+      const config = this.axiosInstance === axios ? getAxiosConfig({
         headers: {
           'User-Agent': this.options.userAgent,
         },
         timeout: this.options.timeout,
-      }));
+      }) : {
+        headers: {
+          'User-Agent': this.options.userAgent,
+        },
+        timeout: this.options.timeout,
+      };
+      
+      const response = await this.axiosInstance.get(url, config);
 
       const html = response.data;
       const $ = cheerio.load(html);
