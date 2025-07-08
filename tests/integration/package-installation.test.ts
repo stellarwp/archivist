@@ -37,7 +37,7 @@ describe('Package Installation', () => {
     }
   });
 
-  it.skipIf(process.env.CI)('should install and run archivist via bunx from npm registry', async () => {
+  it.skipIf(!!process.env.CI)('should install and run archivist via bunx from npm registry', async () => {
     // Create a minimal package.json
     const packageJson = {
       name: "archivist-install-test",
