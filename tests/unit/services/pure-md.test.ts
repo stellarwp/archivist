@@ -65,9 +65,9 @@ describe('PureMdClient', () => {
       const mockContent = '# Test Content\n\nThis is markdown content.';
       mockAxiosInstance.get.mockResolvedValue({ data: mockContent });
 
-      const result = await client.fetchContent('https://example.com');
+      const result = await client.fetchContent('https://test.local');
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/https://example.com');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/https://test.local');
       expect(result).toBe(mockContent);
     });
 
@@ -78,7 +78,7 @@ describe('PureMdClient', () => {
       };
       mockAxiosInstance.get.mockRejectedValue(error);
 
-      await expect(client.fetchContent('https://example.com')).rejects.toThrow(
+      await expect(client.fetchContent('https://test.local')).rejects.toThrow(
         'Rate limit exceeded. Please wait before making more requests.'
       );
     });
@@ -90,7 +90,7 @@ describe('PureMdClient', () => {
       };
       mockAxiosInstance.get.mockRejectedValue(error);
 
-      await expect(client.fetchContent('https://example.com')).rejects.toThrow(
+      await expect(client.fetchContent('https://test.local')).rejects.toThrow(
         'Pure.md API error: 404 Not Found'
       );
     });
@@ -99,7 +99,7 @@ describe('PureMdClient', () => {
       const error = new Error('Network error');
       mockAxiosInstance.get.mockRejectedValue(error);
 
-      await expect(client.fetchContent('https://example.com')).rejects.toThrow('Network error');
+      await expect(client.fetchContent('https://test.local')).rejects.toThrow('Network error');
     });
   });
 
@@ -107,7 +107,7 @@ describe('PureMdClient', () => {
     it('should require API key', async () => {
       client = new PureMdClient();
       
-      await expect(client.extractData('https://example.com', {})).rejects.toThrow(
+      await expect(client.extractData('https://test.local', {})).rejects.toThrow(
         'API key required for data extraction'
       );
     });
@@ -117,10 +117,10 @@ describe('PureMdClient', () => {
       const mockData = { title: 'Test', content: 'Content' };
       mockAxiosInstance.post.mockResolvedValue({ data: mockData });
 
-      const result = await client.extractData('https://example.com', {});
+      const result = await client.extractData('https://test.local', {});
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/https://example.com',
+        '/https://test.local',
         {
           prompt: 'Extract the main content and metadata',
           model: 'meta/llama-3.1-8b',
@@ -133,13 +133,13 @@ describe('PureMdClient', () => {
       client = new PureMdClient({ apiKey: 'test-key' });
       mockAxiosInstance.post.mockResolvedValue({ data: {} });
 
-      await client.extractData('https://example.com', {
+      await client.extractData('https://test.local', {
         prompt: 'Custom prompt',
         model: 'custom/model',
       });
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/https://example.com',
+        '/https://test.local',
         {
           prompt: 'Custom prompt',
           model: 'custom/model',
