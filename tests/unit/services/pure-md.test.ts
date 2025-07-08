@@ -1,6 +1,7 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
 import axios from 'axios';
 import { PureMdClient } from '../../../src/services/pure-md';
+import { getAxiosConfig } from '../../../src/utils/axios-config';
 
 // Store original axios methods
 const originalAxiosCreate = axios.create;
@@ -30,29 +31,29 @@ describe('PureMdClient', () => {
   describe('constructor', () => {
     it('should initialize with default config', () => {
       client = new PureMdClient();
-      expect((axios.create as any)).toHaveBeenCalledWith({
+      expect((axios.create as any)).toHaveBeenCalledWith(getAxiosConfig({
         baseURL: 'https://pure.md',
         headers: {},
         timeout: 30000,
-      });
+      }));
     });
 
     it('should use provided API key', () => {
       client = new PureMdClient({ apiKey: 'test-key' });
-      expect((axios.create as any)).toHaveBeenCalledWith({
+      expect((axios.create as any)).toHaveBeenCalledWith(getAxiosConfig({
         baseURL: 'https://pure.md',
         headers: { 'x-puremd-api-token': 'test-key' },
         timeout: 30000,
-      });
+      }));
     });
 
     it('should use custom base URL', () => {
       client = new PureMdClient({ baseUrl: 'https://custom.pure.md' });
-      expect((axios.create as any)).toHaveBeenCalledWith({
+      expect((axios.create as any)).toHaveBeenCalledWith(getAxiosConfig({
         baseURL: 'https://custom.pure.md',
         headers: {},
         timeout: 30000,
-      });
+      }));
     });
   });
 
