@@ -33,7 +33,7 @@ export class LinkDiscoverer {
       };
     } else {
       // It's LinkDiscoveryOptions
-      this.axiosInstance = axios.create(getAxiosConfig());
+      this.axiosInstance = axios;
     }
   }
 
@@ -77,7 +77,7 @@ export class LinkDiscoverer {
   async discoverLinks(url: string, filterOptions?: LinkFilterOptions): Promise<DiscoveredLinks> {
     try {
       // Fetch the HTML content
-      const response = await axios.get(url, getAxiosConfig({
+      const response = await this.axiosInstance.get(url, getAxiosConfig({
         headers: {
           'User-Agent': this.options.userAgent,
         },
