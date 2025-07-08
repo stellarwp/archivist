@@ -21,8 +21,9 @@ export interface LinkFilterOptions {
 
 export class LinkDiscoverer {
   private axiosInstance: any;
+  private options: LinkDiscoveryOptions;
   
-  constructor(private options: LinkDiscoveryOptions | any) {
+  constructor(options: LinkDiscoveryOptions | any) {
     // Handle both old and new constructor patterns
     if (options.get) {
       // It's an axios instance
@@ -33,6 +34,7 @@ export class LinkDiscoverer {
       };
     } else {
       // It's LinkDiscoveryOptions
+      this.options = options;
       this.axiosInstance = axios;
     }
   }
