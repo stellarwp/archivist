@@ -37,5 +37,4 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 archive/
 
 # Test output directories
-test-archive/
-test-dedup/
+test-*/
