@@ -188,8 +188,10 @@ Sources can be:
   - **name** - Optional friendly name for the source
   - **depth** - How many levels deep to crawl (0 = don't crawl the source page itself)
   - **linkSelector** - CSS selector to find links to crawl (simplified support, primarily for link collection)
-  - **includePatterns** - Array of regex patterns - only links matching at least one will be followed
-  - **excludePatterns** - Array of regex patterns - links matching any of these will be excluded
+  - **includePatterns** - Array of patterns (minimatch or regex) - only links matching at least one will be followed
+  - **excludePatterns** - Array of patterns (minimatch or regex) - links matching any of these will be excluded
+  - **strategy** - Source crawling strategy: `"explorer"` (default) or `"pagination"`
+  - **pagination** - Configuration for pagination strategy (see [Source Strategies](#source-strategies))
 
 #### Output
 - **directory** - Where to save archived files
@@ -458,6 +460,199 @@ Pattern behavior:
 - Patterns are applied to the full URL
 - Both arrays are optional - omit for no filtering
 - Minimatch patterns are detected automatically - use regex syntax for regex patterns
+
+## Source Strategies
+
+Archivist supports different strategies for processing sources, allowing you to handle various website structures including paginated content.
+
+### Explorer Strategy (Default)
+
+The explorer strategy extracts all links from a page at once. This is the default behavior and ideal for:
+- Site indexes and sitemaps
+- Category pages with article listings
+- Navigation pages
+- Any page where all links are visible on a single page
+
+```json
+{
+  "sources": {
+    "url": "https://docs.example.com/index",
+    "strategy": "explorer",
+    "linkSelector": "a.doc-link",
+    "includePatterns": ["*/api/*", "*/guides/*"]
+  }
+}
+```
+
+### Pagination Strategy
+
+The pagination strategy follows paginated content across multiple pages. Perfect for:
+- Blog archives with numbered pages
+- API documentation with paginated endpoints
+- Forum threads
+- Search results
+- Any content split across multiple pages
+
+#### Pattern-Based Pagination
+
+Use when page URLs follow a predictable pattern:
+
+```json
+{
+  "sources": {
+    "url": "https://blog.example.com/posts",
+    "strategy": "pagination",
+    "pagination": {
+      "pagePattern": "https://blog.example.com/posts/page/{page}",
+      "startPage": 1,
+      "maxPages": 10
+    }
+  }
+}
+```
+
+#### Query Parameter Pagination
+
+Use when pagination uses URL query parameters:
+
+```json
+{
+  "sources": {
+    "url": "https://forum.example.com/topics",
+    "strategy": "pagination",
+    "pagination": {
+      "pageParam": "page",
+      "startPage": 1,
+      "maxPages": 20
+    }
+  }
+}
+```
+
+#### Next Link Pagination
+
+Use when pages have "Next" or "Older Posts" links:
+
+```json
+{
+  "sources": {
+    "url": "https://news.example.com/archive",
+    "strategy": "pagination",
+    "pagination": {
+      "nextLinkSelector": "a.next-page, a[rel='next']",
+      "maxPages": 50
+    }
+  }
+}
+```
+
+### Pagination Configuration Options
+
+- **pagePattern** - URL pattern with `{page}` placeholder for page numbers
+- **pageParam** - Query parameter name for page numbers (default: "page")
+- **startPage** - First page number (default: 1)
+- **maxPages** - Maximum pages to crawl (default: 10 for patterns, 50 for next links)
+- **nextLinkSelector** - CSS selector for finding next page links
+
+### Complete Examples
+
+#### Blog with Numbered Pages
+
+```json
+{
+  "archives": [{
+    "name": "Tech Blog Archive",
+    "sources": {
+      "url": "https://techblog.example.com",
+      "strategy": "pagination",
+      "pagination": {
+        "pagePattern": "https://techblog.example.com/page/{page}",
+        "startPage": 1,
+        "maxPages": 25
+      },
+      "includePatterns": ["*/2024/*", "*/2023/*"],
+      "excludePatterns": ["*/draft/*"]
+    },
+    "output": {
+      "directory": "./archive/blog",
+      "format": "markdown"
+    }
+  }]
+}
+```
+
+#### API Documentation with Query Parameters
+
+```json
+{
+  "archives": [{
+    "name": "API Reference",
+    "sources": {
+      "url": "https://api.example.com/docs/endpoints",
+      "strategy": "pagination",
+      "pagination": {
+        "pageParam": "offset",
+        "startPage": 0,
+        "maxPages": 10
+      }
+    },
+    "output": {
+      "directory": "./archive/api-docs",
+      "format": "json"
+    }
+  }]
+}
+```
+
+#### Forum with Next Links
+
+```json
+{
+  "archives": [{
+    "name": "Support Forum",
+    "sources": {
+      "url": "https://forum.example.com/category/help",
+      "strategy": "pagination",
+      "pagination": {
+        "nextLinkSelector": "a.pagination-next",
+        "maxPages": 100
+      }
+    },
+    "output": {
+      "directory": "./archive/forum",
+      "format": "markdown"
+    }
+  }]
+}
+```
+
+#### Mixed Strategies
+
+```json
+{
+  "archives": [{
+    "name": "Complete Documentation",
+    "sources": [
+      {
+        "url": "https://docs.example.com/index",
+        "strategy": "explorer",
+        "linkSelector": "nav a"
+      },
+      {
+        "url": "https://docs.example.com/changelog",
+        "strategy": "pagination",
+        "pagination": {
+          "pageParam": "page",
+          "maxPages": 5
+        }
+      }
+    ],
+    "output": {
+      "directory": "./archive/docs"
+    }
+  }]
+}
+```
 
 ## CLI Reference
 
