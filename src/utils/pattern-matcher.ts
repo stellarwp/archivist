@@ -94,7 +94,7 @@ export function matchesPattern(url: string, pattern: string): boolean {
         if (pattern.includes('{') && pattern.includes('}')) {
           // Handle brace expansion like *.{jpg,png,gif}
           const match = pattern.match(/\*\.{([^}]+)}/);
-          if (match) {
+          if (match && match[1]) {
             const extensions = match[1].split(',');
             return extensions.some(ext => url.toLowerCase().endsWith('.' + ext.toLowerCase()));
           }

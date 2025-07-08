@@ -643,8 +643,14 @@ git clone https://github.com/stellarwp/archivist.git
 cd archivist
 bun install
 
-# Run tests
+# Run tests (includes TypeScript type checking)
 bun test
+
+# Run only TypeScript type checking
+bun run test:types
+
+# Run tests without type checking  
+bun run test:only
 
 # Run in development mode
 bun run dev

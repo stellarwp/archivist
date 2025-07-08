@@ -34,10 +34,14 @@
   "scripts": {
     "archive": "bun run src/cli.ts",
     "dev": "bun run --watch src/cli.ts",
-    "test": "bun test",
+    "test": "bunx tsc --noEmit && bun test",
+    "test:only": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
-    "prepublishOnly": "bun test && bunx tsc --noEmit",
+    "test:types": "bunx tsc --noEmit",
+    "test:all": "bunx tsc --noEmit && bun test",
+    "lint": "bunx tsc --noEmit",
+    "prepublishOnly": "bunx tsc --noEmit && bun test",
     "build:action": "node build/build-action.js"
   },
   "devDependencies": {
