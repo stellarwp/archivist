@@ -32,20 +32,4 @@ describe('LinkDiscoverer', () => {
     });
   });
 
-  // Integration test with real website (example.com)
-  describe.skip('integration with example.com', () => {
-    it('should discover links from example.com successfully', async () => {
-      const discoverer = new LinkDiscoverer({
-        userAgent: 'Archivist-Test/1.0',
-        timeout: 10000,
-      });
-      
-      const result = await discoverer.discoverLinks('https://example.com');
-      
-      expect(result.url).toBe('https://example.com');
-      expect(result.links).toContain('https://www.iana.org/domains/example');
-      expect(result.crawledAt).toBeDefined();
-      expect(result.links.length).toBeGreaterThan(0);
-    });
-  });
 });

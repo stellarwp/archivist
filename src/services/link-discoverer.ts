@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { getAxiosConfig } from '../utils/axios-config';
 
 export interface LinkDiscoveryOptions {
   userAgent: string;
@@ -23,12 +24,12 @@ export class LinkDiscoverer {
   async discoverLinks(url: string, filterOptions?: LinkFilterOptions): Promise<DiscoveredLinks> {
     try {
       // Fetch the HTML content
-      const response = await axios.get(url, {
+      const response = await axios.get(url, getAxiosConfig({
         headers: {
           'User-Agent': this.options.userAgent,
         },
         timeout: this.options.timeout,
-      });
+      }));
 
       const html = response.data;
       const $ = cheerio.load(html);

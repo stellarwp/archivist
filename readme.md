@@ -433,34 +433,40 @@ Configure delays to respect rate limits:
 
 ## GitHub Actions
 
-The project includes a GitHub Action workflow for automated archiving.
+Archivist can be used as a GitHub Action for automated archiving without needing to install dependencies.
 
-### Setup
+### Using as a GitHub Action
 
-1. Add your config file to the repository
-2. Set the `PURE_API_KEY` secret in your repository settings
-3. The action runs daily at 2 AM UTC
-
-### Manual Trigger
-
-```bash
-gh workflow run archive.yml -f config_path=./production.config.json
+```yaml
+- uses: stellarwp/archivist@action
+  with:
+    config-file: './archivist.config.json'
+    pure-api-key: ${{ secrets.PURE_API_KEY }}
 ```
 
-### Workflow Configuration
+**Note**: The GitHub Action requires a JSON config file instead of TypeScript.
 
-The workflow is defined in `.github/workflows/archive.yml`:
+See the [GitHub Action documentation](docs/github-action.md) for detailed usage and examples.
+
+### Using via Workflow
+
+The project also includes example workflows for automated archiving:
 
 ```yaml
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
   workflow_dispatch:
-    inputs:
-      config_path:
-        description: 'Path to config file'
-        required: false
-        default: './archivist.config.json'
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: stellarwp/archivist@action
+        with:
+          config-file: './archivist.config.json'
+          pure-api-key: ${{ secrets.PURE_API_KEY }}
 ```
 
 ## Development

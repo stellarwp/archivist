@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { parseMarkdownContent } from '../../../src/utils/markdown-parser';
 
 describe('markdown-parser', () => {
-  const testUrl = 'https://example.com/page';
+  const testUrl = 'https://test.local/page';
 
   describe('parseMarkdownContent', () => {
     it('should extract title from H1', () => {
@@ -19,34 +19,34 @@ describe('markdown-parser', () => {
 
     it('should extract markdown links', () => {
       const markdown = `
-Some text with [a link](https://example.com/link1) and
-[another link](https://example.com/link2).
+Some text with [a link](https://test.local/link1) and
+[another link](https://test.local/link2).
 `;
       const result = parseMarkdownContent(markdown, testUrl);
-      expect(result.metadata.links).toContain('https://example.com/link1');
-      expect(result.metadata.links).toContain('https://example.com/link2');
+      expect(result.metadata.links).toContain('https://test.local/link1');
+      expect(result.metadata.links).toContain('https://test.local/link2');
     });
 
     it('should extract plain URLs', () => {
       const markdown = `
-Check out https://example.com/direct and
-also visit https://example.com/another
+Check out https://test.local/direct and
+also visit https://test.local/another
 `;
       const result = parseMarkdownContent(markdown, testUrl);
-      expect(result.metadata.links).toContain('https://example.com/direct');
-      expect(result.metadata.links).toContain('https://example.com/another');
+      expect(result.metadata.links).toContain('https://test.local/direct');
+      expect(result.metadata.links).toContain('https://test.local/another');
     });
 
     it('should convert relative links to absolute', () => {
       const markdown = '[Relative Link](/relative/path)';
       const result = parseMarkdownContent(markdown, testUrl);
-      expect(result.metadata.links).toContain('https://example.com/relative/path');
+      expect(result.metadata.links).toContain('https://test.local/relative/path');
     });
 
     it('should ignore anchor and mailto links', () => {
       const markdown = `
 [Section](#section)
-[Email](mailto:test@example.com)
+[Email](mailto:test@test.local)
 [External](https://external.com)
 `;
       const result = parseMarkdownContent(markdown, testUrl);
@@ -56,13 +56,13 @@ also visit https://example.com/another
 
     it('should deduplicate links', () => {
       const markdown = `
-[Link 1](https://example.com/same)
-[Link 2](https://example.com/same)
-https://example.com/same
+[Link 1](https://test.local/same)
+[Link 2](https://test.local/same)
+https://test.local/same
 `;
       const result = parseMarkdownContent(markdown, testUrl);
       expect(result.metadata.links).toHaveLength(1);
-      expect(result.metadata.links[0]).toBe('https://example.com/same');
+      expect(result.metadata.links[0]).toBe('https://test.local/same');
     });
 
     it('should set metadata correctly', () => {

@@ -18,30 +18,30 @@ describe('Crawler Link Deduplication', () => {
     axios.create = mock(() => mockAxiosInstance) as any;
     axios.get = mock((url: string) => {
       // Return HTML with duplicate links
-      if (url === 'https://example.com/page1') {
+      if (url === 'https://test.local/page1') {
         return Promise.resolve({
           data: `
             <html>
               <body>
-                <a href="https://example.com/article1">Article 1</a>
-                <a href="https://example.com/article2">Article 2</a>
-                <a href="https://example.com/article1">Article 1 Again</a>
-                <a href="https://example.com/article3">Article 3</a>
-                <a href="https://example.com/article2">Article 2 Again</a>
+                <a href="https://test.local/article1">Article 1</a>
+                <a href="https://test.local/article2">Article 2</a>
+                <a href="https://test.local/article1">Article 1 Again</a>
+                <a href="https://test.local/article3">Article 3</a>
+                <a href="https://test.local/article2">Article 2 Again</a>
               </body>
             </html>
           `,
         });
       }
-      if (url === 'https://example.com/page2') {
+      if (url === 'https://test.local/page2') {
         return Promise.resolve({
           data: `
             <html>
               <body>
-                <a href="https://example.com/article2">Article 2</a>
-                <a href="https://example.com/article3">Article 3</a>
-                <a href="https://example.com/article4">Article 4</a>
-                <a href="https://example.com/article3">Article 3 Again</a>
+                <a href="https://test.local/article2">Article 2</a>
+                <a href="https://test.local/article3">Article 3</a>
+                <a href="https://test.local/article4">Article 4</a>
+                <a href="https://test.local/article3">Article 3 Again</a>
               </body>
             </html>
           `,
@@ -65,11 +65,11 @@ describe('Crawler Link Deduplication', () => {
           name: 'Test Deduplication',
           sources: [
             {
-              url: 'https://example.com/page1',
+              url: 'https://test.local/page1',
               linkSelector: 'a[href]',
             },
             {
-              url: 'https://example.com/page2',
+              url: 'https://test.local/page2',
               linkSelector: 'a[href]',
             },
           ],
@@ -121,13 +121,13 @@ describe('Crawler Link Deduplication', () => {
   it('should handle Set-based deduplication correctly', () => {
     const queue = new Set<string>();
     const links = [
-      'https://example.com/page1',
-      'https://example.com/page2',
-      'https://example.com/page1', // duplicate
-      'https://example.com/page3',
-      'https://example.com/page2', // duplicate
-      'https://example.com/page1', // duplicate
-      'https://example.com/page4',
+      'https://test.local/page1',
+      'https://test.local/page2',
+      'https://test.local/page1', // duplicate
+      'https://test.local/page3',
+      'https://test.local/page2', // duplicate
+      'https://test.local/page1', // duplicate
+      'https://test.local/page4',
     ];
 
     const queueSizeBefore = queue.size;

@@ -1,42 +1,25 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
 import { extractLinksFromPage } from '../../../src/utils/link-extractor';
 import axios from 'axios';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 // Store original axios.get
 const originalAxiosGet = axios.get;
 
+// Load mock HTML fixtures
+const fixturesPath = join(__dirname, '../../fixtures');
+const simplePage = readFileSync(join(fixturesPath, 'simple-page.html'), 'utf-8');
+const docsPage = readFileSync(join(fixturesPath, 'documentation-page.html'), 'utf-8');
+const blogPage = readFileSync(join(fixturesPath, 'blog-page.html'), 'utf-8');
+const apiIndex = readFileSync(join(fixturesPath, 'api-index.html'), 'utf-8');
+
 // Mock responses
 const mockResponses: Record<string, string> = {
-  'https://example.com/index': `
-    <!DOCTYPE html>
-    <html>
-    <body>
-      <h1>Documentation Index</h1>
-      <div class="links">
-        <a href="https://example.com/api/users">Users API</a>
-        <a href="https://example.com/api/posts">Posts API</a>
-        <a href="https://example.com/guides/intro">Introduction</a>
-        <a href="/api/comments">Comments API</a>
-        <a href="mailto:support@example.com">Contact</a>
-        <a href="#section">Jump to section</a>
-        <a href="https://external.com/resource">External Link</a>
-      </div>
-    </body>
-    </html>
-  `,
-  'https://example.com/blog': `
-    <!DOCTYPE html>
-    <html>
-    <body>
-      <div class="blog-posts">
-        <a href="https://example.com/blog/post-1.html">Post 1</a>
-        <a href="https://example.com/blog/post-2.html">Post 2</a>
-        <a href="https://example.com/blog/draft.html">Draft Post</a>
-        <a href="https://example.com/about">About</a>
-      </div>
-    </body>
-    </html>
-  `,
+  'https://test.local/index': simplePage,
+  'https://test.local/docs': docsPage,
+  'https://test.local/blog': blogPage,
+  'https://test.local/api': apiIndex,
 };
 
 describe('link-extractor', () => {
@@ -54,159 +37,184 @@ describe('link-extractor', () => {
     // Restore original axios.get
     axios.get = originalAxiosGet;
   });
+
   describe('extractLinksFromPage', () => {
     it('should extract all HTTP/HTTPS links from a page', async () => {
-      const links = await extractLinksFromPage({
-        url: 'https://example.com/index',
+      const result = await extractLinksFromPage({
+        url: 'https://test.local/index',
+        userAgent: 'Test/1.0',
+        timeout: 5000,
       });
 
-      expect(links).toContain('https://example.com/api/users');
-      expect(links).toContain('https://example.com/api/posts');
-      expect(links).toContain('https://example.com/guides/intro');
-      expect(links).toContain('https://example.com/api/comments'); // Relative URL converted
-      expect(links).toContain('https://external.com/resource');
-      
-      // Should not contain these
-      expect(links).not.toContain('mailto:support@example.com');
-      expect(links).not.toContain('#section');
+      expect(result).toContain('https://test.local/external');
+      expect(result.length).toBeGreaterThan(0);
     });
 
     it('should convert relative URLs to absolute', async () => {
-      const links = await extractLinksFromPage({
-        url: 'https://example.com/index',
+      const result = await extractLinksFromPage({
+        url: 'https://test.local/index',
+        userAgent: 'Test/1.0',
+        timeout: 5000,
       });
 
-      // Check that relative URL was converted
-      expect(links).toContain('https://example.com/api/comments');
+      // Check that relative URLs are converted to absolute
+      expect(result).toContain('https://test.local/page1');
+      expect(result).toContain('https://test.local/page2');
+      expect(result).toContain('https://test.local/article/1');
     });
 
     it('should filter links based on includePatterns', async () => {
-      const links = await extractLinksFromPage({
-        url: 'https://example.com/index',
-        includePatterns: ['https://example\\.com/api/.*'],
+      const result = await extractLinksFromPage({
+        url: 'https://test.local/api',
+        userAgent: 'Test/1.0',
+        timeout: 5000,
+        includePatterns: ['/api/v1/.*'],
       });
 
-      expect(links).toContain('https://example.com/api/users');
-      expect(links).toContain('https://example.com/api/posts');
-      expect(links).toContain('https://example.com/api/comments');
-      
-      // Should not contain non-matching links
-      expect(links).not.toContain('https://example.com/guides/intro');
-      expect(links).not.toContain('https://external.com/resource');
+      expect(result).toContain('https://test.local/api/v1/users');
+      expect(result).toContain('https://test.local/api/v1/posts');
+      expect(result).toContain('https://test.local/api/v1/comments');
+      expect(result).not.toContain('https://test.local/api/v2/graphql');
+      expect(result).not.toContain('https://test.local/api/webhooks');
     });
 
     it('should filter links with includePatterns', async () => {
-      const links = await extractLinksFromPage({
-        url: 'https://example.com/blog',
+      const result = await extractLinksFromPage({
+        url: 'https://test.local/docs',
+        userAgent: 'Test/1.0',
+        timeout: 5000,
         includePatterns: ['.*\\.html$'],
       });
 
-      expect(links).toContain('https://example.com/blog/post-1.html');
-      expect(links).toContain('https://example.com/blog/post-2.html');
-      expect(links).toContain('https://example.com/blog/draft.html');
-      
-      // Should not contain non-HTML links
-      expect(links).not.toContain('https://example.com/about');
+      expect(result).toContain('https://test.local/docs/getting-started.html');
+      expect(result).toContain('https://test.local/docs/api-reference.html');
+      expect(result).toContain('https://test.local/docs/tutorials.html');
+      expect(result).toContain('https://test.local/docs/faq.html');
+      expect(result).not.toContain('https://test.local/blog');
+      expect(result).not.toContain('https://test.local/about');
     });
 
     it('should filter links with excludePatterns', async () => {
-      const links = await extractLinksFromPage({
-        url: 'https://example.com/blog',
-        excludePatterns: ['.*draft.*'],
+      const result = await extractLinksFromPage({
+        url: 'https://test.local/api',
+        userAgent: 'Test/1.0',
+        timeout: 5000,
+        excludePatterns: ['.*deprecated.*', '.*\\.pdf$'],
       });
 
-      expect(links).toContain('https://example.com/blog/post-1.html');
-      expect(links).toContain('https://example.com/blog/post-2.html');
-      expect(links).toContain('https://example.com/about');
-      
-      // Should not contain draft links
-      expect(links).not.toContain('https://example.com/blog/draft.html');
+      expect(result).not.toContain('https://test.local/api/deprecated/old-endpoints');
+      expect(result).not.toContain('https://test.local/downloads/api-client.pdf');
+      expect(result).toContain('https://test.local/api/v1/users');
+      expect(result).toContain('https://test.local/api/authentication');
     });
 
     it('should support both includePatterns and excludePatterns', async () => {
-      const links = await extractLinksFromPage({
-        url: 'https://example.com/index',
-        includePatterns: ['https://example\\.com/.*'],
-        excludePatterns: ['.*guides.*'],
+      const result = await extractLinksFromPage({
+        url: 'https://test.local/api',
+        userAgent: 'Test/1.0',
+        timeout: 5000,
+        includePatterns: ['/api/.*'],
+        excludePatterns: ['.*deprecated.*'],
       });
 
-      expect(links).toContain('https://example.com/api/users');
-      expect(links).toContain('https://example.com/api/posts');
-      expect(links).toContain('https://example.com/api/comments');
-      
-      // Should not contain guides or external links
-      expect(links).not.toContain('https://example.com/guides/intro');
-      expect(links).not.toContain('https://external.com/resource');
+      expect(result).toContain('https://test.local/api/v1/users');
+      expect(result).toContain('https://test.local/api/v1/posts');
+      expect(result).not.toContain('https://test.local/api/deprecated/old-endpoints');
+      expect(result).not.toContain('https://test.local/downloads/api-client.pdf');
     });
 
     it('should remove duplicate links', async () => {
-      // Temporarily override mock for this specific test
-      const currentMock = axios.get;
-      axios.get = mock(() => Promise.resolve({
-        data: `
-          <a href="https://example.com/page">Link 1</a>
-          <a href="https://example.com/page">Link 2</a>
-          <a href="https://example.com/page">Link 3</a>
-        `,
-      })) as any;
+      // Add a mock response with duplicate links
+      const duplicatesHtml = `
+        <!DOCTYPE html>
+        <html>
+        <body>
+          <a href="/page1">Link 1</a>
+          <a href="/page1">Link 1 again</a>
+          <a href="https://test.local/page1">Link 1 absolute</a>
+          <a href="/page2">Link 2</a>
+        </body>
+        </html>
+      `;
+      
+      axios.get = mock(() => Promise.resolve({ data: duplicatesHtml })) as any;
 
-      const links = await extractLinksFromPage({
-        url: 'https://example.com/test',
+      const result = await extractLinksFromPage({
+        url: 'https://test.local/test',
+        userAgent: 'Test/1.0',
+        timeout: 5000,
       });
 
-      // Should only have one instance
-      expect(links).toEqual(['https://example.com/page']);
-      
-      // Restore the mock
-      axios.get = currentMock;
+      // Count occurrences of each link
+      const linkCounts = result.reduce((acc, link) => {
+        acc[link] = (acc[link] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Each link should appear only once
+      Object.values(linkCounts).forEach(count => {
+        expect(count).toBe(1);
+      });
     });
 
     it('should handle errors gracefully', async () => {
-      const links = await extractLinksFromPage({
-        url: 'https://example.com/nonexistent',
+      const result = await extractLinksFromPage({
+        url: 'https://test.local/nonexistent',
+        userAgent: 'Test/1.0',
+        timeout: 5000,
       });
 
-      expect(links).toEqual([]);
+      expect(result).toEqual([]);
     });
 
     it('should handle pages with no links', async () => {
-      // Temporarily override mock for this specific test
-      const currentMock = axios.get;
-      axios.get = mock(() => Promise.resolve({
-        data: '<html><body><p>No links here</p></body></html>',
-      })) as any;
+      const noLinksHtml = `
+        <!DOCTYPE html>
+        <html>
+        <body>
+          <h1>Page with no links</h1>
+          <p>Just text content</p>
+        </body>
+        </html>
+      `;
+      
+      axios.get = mock(() => Promise.resolve({ data: noLinksHtml })) as any;
 
-      const links = await extractLinksFromPage({
-        url: 'https://example.com/nolinks',
+      const result = await extractLinksFromPage({
+        url: 'https://test.local/nolinks',
+        userAgent: 'Test/1.0',
+        timeout: 5000,
       });
 
-      expect(links).toEqual([]);
-      
-      // Restore the mock
-      axios.get = currentMock;
+      expect(result).toEqual([]);
     });
 
     it('should handle malformed URLs gracefully', async () => {
-      // Temporarily override mock for this specific test
-      const currentMock = axios.get;
-      axios.get = mock(() => Promise.resolve({
-        data: `
-          <a href="https://example.com/valid">Valid Link</a>
-          <a href="javascript:void(0)">JS Link</a>
-          <a href="://broken">Broken Link</a>
-          <a href="">Empty Link</a>
-        `,
-      })) as any;
+      const malformedHtml = `
+        <!DOCTYPE html>
+        <html>
+        <body>
+          <a href="://broken">Broken protocol</a>
+          <a href="//incomplete.com/path">Protocol-relative</a>
+          <a href="javascript:void(0)">JavaScript</a>
+          <a href="mailto:test@test.com">Email</a>
+          <a href="/valid/path">Valid relative</a>
+        </body>
+        </html>
+      `;
+      
+      axios.get = mock(() => Promise.resolve({ data: malformedHtml })) as any;
 
-      const links = await extractLinksFromPage({
-        url: 'https://example.com/mixed',
+      const result = await extractLinksFromPage({
+        url: 'https://test.local/malformed',
+        userAgent: 'Test/1.0',
+        timeout: 5000,
       });
 
-      // Should only contain valid URLs
-      expect(links).toEqual(['https://example.com/valid']);
-      
-      // Restore the mock
-      axios.get = currentMock;
+      expect(result).toContain('https://test.local/valid/path');
+      expect(result).not.toContain('://broken');
+      expect(result).not.toContain('javascript:void(0)');
+      expect(result).not.toContain('mailto:test@test.com');
     });
   });
 });

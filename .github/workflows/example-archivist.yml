@@ -1,0 +1,47 @@
+name: Example - Archive Documentation
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Create config
+        run: |
+          cat > archivist.config.json << 'EOF'
+          {
+            "archives": [
+              {
+                "name": "Example Docs",
+                "sources": ["https://example.com"],
+                "output": {
+                  "directory": "./archived-docs",
+                  "format": "markdown"
+                }
+              }
+            ],
+            "crawl": {
+              "maxConcurrency": 2,
+              "delay": 1000,
+              "userAgent": "Archivist/1.0 (GitHub Actions)"
+            }
+          }
+          EOF
+      
+      - name: Archive websites
+        uses: stellarwp/archivist@action
+        with:
+          config-file: './archivist.config.json'
+          pure-api-key: ${{ secrets.PURE_API_KEY }}
+      
+      - name: Upload archives
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: archived-content
+          path: archived-docs/
