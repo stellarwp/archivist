@@ -25,23 +25,30 @@ export class LinkDiscoverer {
   
   constructor(options: LinkDiscoveryOptions | any) {
     // Handle both old and new constructor patterns
-    if (options.get) {
+    if (options && typeof options.get === 'function') {
       // It's an axios instance
       this.axiosInstance = options;
       this.options = {
         userAgent: 'Archivist/1.0',
         timeout: 30000,
       };
-    } else {
+    } else if (options && typeof options === 'object') {
       // It's LinkDiscoveryOptions
       this.options = options;
+      this.axiosInstance = axios;
+    } else {
+      // Fallback for edge cases
+      this.options = {
+        userAgent: 'Archivist/1.0',
+        timeout: 30000,
+      };
       this.axiosInstance = axios;
     }
   }
 
   async discover(url: string, selector: string = 'a[href]'): Promise<string[]> {
     try {
-      const config = this.options.get ? {} : getAxiosConfig({
+      const config = this.axiosInstance.get && this.axiosInstance !== axios ? {} : getAxiosConfig({
         headers: {
           'User-Agent': this.options.userAgent,
         },
