@@ -10,6 +10,8 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@stellarwp/archivist": "../stellarwp-archivist-0.1.0-beta.4.tgz"
+    "@stellarwp/archivist": "../stellarwp-archivist-0.1.0-beta.4.tgz",
+    "@types/minimatch": "^6.0.0",
+    "minimatch": "^10.0.3"
   }
 }

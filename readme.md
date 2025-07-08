@@ -328,7 +328,7 @@ Use a page as a link collector to crawl all documentation pages:
       "sources": {
         "url": "https://docs.example.com/api/index",
         "depth": 0,
-        "includePatterns": ["https://docs\\.example\\.com/api/v1/.*"]
+        "includePatterns": ["*/api/v1/*"]
       },
       "output": {
         "directory": "./archive/api-reference",
@@ -342,12 +342,57 @@ Use a page as a link collector to crawl all documentation pages:
 In this example:
 - The index page at `/api/index` is used only to collect links
 - `depth: 0` means the index page itself won't be archived
-- Only links matching the `includePatterns` regex will be crawled
+- Only links matching the `includePatterns` pattern will be crawled
 - All matched links will be crawled and archived
 
-## Enhanced Pattern Filtering (v0.1.0-beta.3+)
+## Enhanced Pattern Filtering
 
-Control which links are followed during crawling with include and exclude patterns:
+Control which links are followed during crawling with include and exclude patterns. Archivist supports both **minimatch glob patterns** (recommended) and **regular expressions** (for backward compatibility).
+
+### Minimatch Patterns (Recommended)
+
+Use familiar glob patterns like those used in `.gitignore` files:
+
+```json
+{
+  "archives": [
+    {
+      "name": "Filtered Documentation",
+      "sources": {
+        "url": "https://docs.example.com",
+        "depth": 2,
+        "includePatterns": [
+          "*/api/*",              // Match any URL with /api/ in the path
+          "**/guide/**",          // Match /guide/ at any depth
+          "*.html",               // Match HTML files
+          "*.{md,mdx}"            // Match .md or .mdx files
+        ],
+        "excludePatterns": [
+          "*.pdf",                // Exclude PDF files
+          "*/private/*",          // Exclude /private/ paths
+          "**/test/**",           // Exclude /test/ at any depth
+          "*/v1/*"                // Exclude version 1 API
+        ]
+      },
+      "output": {
+        "directory": "./archive/filtered-docs"
+      }
+    }
+  ]
+}
+```
+
+Common minimatch patterns:
+- `*` - Matches any string except path separators
+- `**` - Matches any string including path separators
+- `?` - Matches any single character
+- `[abc]` - Matches any character in the brackets
+- `{a,b,c}` - Matches any of the comma-separated patterns
+- `*.ext` - Matches files with the specified extension
+
+### Regular Expression Patterns (Backward Compatible)
+
+For more complex matching, use regular expressions:
 
 ```json
 {
@@ -375,11 +420,44 @@ Control which links are followed during crawling with include and exclude patter
 }
 ```
 
+### Pattern Examples
+
+#### Filter by file type:
+```json
+"includePatterns": ["*.{html,htm,md,mdx}"],
+"excludePatterns": ["*.{pdf,zip,mp4,avi}"]
+```
+
+#### Filter by API version:
+```json
+"includePatterns": ["*/v2/*", "*/v3/*"],
+"excludePatterns": ["*/v1/*", "*/beta/*", "*/deprecated/*"]
+```
+
+#### Filter by domain:
+```json
+"includePatterns": ["https://docs.example.com/**", "https://api.example.com/**"],
+"excludePatterns": ["https://blog.example.com/**"]
+```
+
+#### Complex filtering:
+```json
+"includePatterns": [
+  "**/api/v[2-3]/*",                    // Minimatch: v2 or v3 API
+  "^https://docs\\.example\\.com/.*"    // Regex: docs subdomain only
+],
+"excludePatterns": [
+  "*/internal/*",                       // Minimatch: exclude internal
+  ".*\\.(pdf|zip)$"                     // Regex: exclude downloads
+]
+```
+
 Pattern behavior:
-- **includePatterns**: Array of regex patterns - links must match at least one to be followed
-- **excludePatterns**: Array of regex patterns - links matching any of these are excluded
+- **includePatterns**: Array of patterns - links must match at least one to be followed
+- **excludePatterns**: Array of patterns - links matching any of these are excluded
 - Patterns are applied to the full URL
 - Both arrays are optional - omit for no filtering
+- Minimatch patterns are detected automatically - use regex syntax for regex patterns
 
 ## CLI Reference
 

@@ -14,6 +14,7 @@ import {
   hashFilename 
 } from './utils/file-naming';
 import { extractLinksFromPage } from './utils/link-extractor';
+import { shouldIncludeUrl } from './utils/pattern-matcher';
 
 export class WebCrawler {
   private config: ArchivistConfig;
@@ -297,41 +298,7 @@ class ArchiveCrawler {
       return links;
     }
 
-    return links.filter(link => {
-      // Check include patterns - if specified, link must match at least one
-      if (includePatterns && includePatterns.length > 0) {
-        const matchesInclude = includePatterns.some(pattern => {
-          try {
-            return new RegExp(pattern).test(link);
-          } catch (e) {
-            console.warn(`Invalid include pattern: ${pattern}`);
-            return false;
-          }
-        });
-        
-        if (!matchesInclude) {
-          return false;
-        }
-      }
-      
-      // Check exclude patterns - link must not match any
-      if (excludePatterns && excludePatterns.length > 0) {
-        const matchesExclude = excludePatterns.some(pattern => {
-          try {
-            return new RegExp(pattern).test(link);
-          } catch (e) {
-            console.warn(`Invalid exclude pattern: ${pattern}`);
-            return false;
-          }
-        });
-        
-        if (matchesExclude) {
-          return false;
-        }
-      }
-      
-      return true;
-    });
+    return links.filter(link => shouldIncludeUrl(link, includePatterns, excludePatterns));
   }
 
   async save(): Promise<void> {
