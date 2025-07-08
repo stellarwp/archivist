@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { getAxiosConfig } from '../utils/axios-config';
+import { shouldIncludeUrl } from '../utils/pattern-matcher';
 
 export interface LinkDiscoveryOptions {
   userAgent: string;
@@ -96,39 +97,6 @@ export class LinkDiscoverer {
     }
 
     const { includePatterns, excludePatterns } = filterOptions;
-
-    // Check include patterns
-    if (includePatterns && includePatterns.length > 0) {
-      const matchesInclude = includePatterns.some(pattern => {
-        try {
-          return new RegExp(pattern).test(url);
-        } catch {
-          console.warn(`Invalid include pattern: ${pattern}`);
-          return false;
-        }
-      });
-      
-      if (!matchesInclude) {
-        return false;
-      }
-    }
-    
-    // Check exclude patterns
-    if (excludePatterns && excludePatterns.length > 0) {
-      const matchesExclude = excludePatterns.some(pattern => {
-        try {
-          return new RegExp(pattern).test(url);
-        } catch {
-          console.warn(`Invalid exclude pattern: ${pattern}`);
-          return false;
-        }
-      });
-      
-      if (matchesExclude) {
-        return false;
-      }
-    }
-    
-    return true;
+    return shouldIncludeUrl(url, includePatterns, excludePatterns);
   }
 }

@@ -34,14 +34,21 @@
   "scripts": {
     "archive": "bun run src/cli.ts",
     "dev": "bun run --watch src/cli.ts",
-    "test": "bun test",
+    "test": "bunx tsc --noEmit && bun test",
+    "test:only": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
-    "prepublishOnly": "bun test && bunx tsc --noEmit",
+    "test:types": "bunx tsc --noEmit",
+    "test:all": "bunx tsc --noEmit && bun test",
+    "test:install": "bun test tests/integration/package-installation.test.ts",
+    "test:cli": "bun test tests/integration/cli-commands.test.ts",
+    "lint": "bunx tsc --noEmit",
+    "prepublishOnly": "bunx tsc --noEmit && bun test",
     "build:action": "node build/build-action.js"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/minimatch": "^6.0.0",
     "@types/node": "^20.0.0",
     "esbuild": "^0.25.5",
     "typescript": "^5"
@@ -50,6 +57,7 @@
     "axios": "^1.7.0",
     "cheerio": "^1.1.0",
     "commander": "^12.0.0",
+    "minimatch": "^10.0.3",
     "zod": "^3.23.0"
   }
 }
