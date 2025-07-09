@@ -10,25 +10,31 @@ This directory contains example configurations for various pagination strategies
 - **Strategy**: Uses `pagePattern` with `{page}` placeholder
 - **Features**: Include/exclude patterns for filtering content
 
-### 2. E-commerce Products (`ecommerce-products.json`)
+### 2. Pagination with Depth (`pagination-with-depth.json`)
+- **Pattern**: Pagination + link extraction from each page
+- **Use Case**: Extract all article links from paginated blog pages
+- **Strategy**: Uses `pagination` with `depth: 1` to extract links
+- **Features**: Combines pagination with explorer-like link extraction
+
+### 3. E-commerce Products (`ecommerce-products.json`)
 - **Pattern**: Query parameter pagination
 - **Use Case**: Product listings with page parameters
 - **Strategy**: Uses `pageParam` for different categories
 - **Features**: Multiple archives for different product categories
 
-### 3. Forum Archive (`forum-archive.json`)
+### 4. Forum Archive (`forum-archive.json`)
 - **Pattern**: Offset-based pagination
 - **Use Case**: Forum topics with offset pagination
 - **Strategy**: Uses `pageParam` with `pageIncrement`
 - **Features**: Multiple categories with different limits
 
-### 4. Documentation Hybrid (`documentation-hybrid.json`)
+### 5. Documentation Hybrid (`documentation-hybrid.json`)
 - **Pattern**: Mixed strategies
 - **Use Case**: Complex documentation site
 - **Strategy**: Combines explorer and multiple pagination types
 - **Features**: Different strategies for different sections
 
-### 5. News & Infinite Scroll (`news-infinite-scroll.json`)
+### 6. News & Infinite Scroll (`news-infinite-scroll.json`)
 - **Pattern**: Next link following
 - **Use Case**: News sites and galleries with infinite scroll
 - **Strategy**: Uses `nextLinkSelector` with multiple fallbacks
@@ -72,6 +78,32 @@ This directory contains example configurations for various pagination strategies
 }
 ```
 
+## Combining Pagination with Link Extraction
+
+To extract all links from paginated pages (like getting all article links from a paginated blog), use the `depth` parameter with your pagination configuration:
+
+```json
+{
+  "sources": {
+    "url": "https://example.com/blog",
+    "strategy": "pagination",
+    "depth": 1,  // This tells the crawler to extract links from each paginated page
+    "includePatterns": ["*/article/*", "*/post/*"],  // Only extract article links
+    "excludePatterns": ["*/tag/*", "*/author/*"],    // Ignore tag and author pages
+    "pagination": {
+      "pagePattern": "https://example.com/blog/page/{page}",
+      "startPage": 1,
+      "maxPages": 10
+    }
+  }
+}
+```
+
+This configuration will:
+1. Find all paginated pages (page 1 through 10)
+2. For each paginated page, extract all links matching the include patterns
+3. Queue those links for crawling
+
 ## Tips for Pagination
 
 1. **Start Small**: Test with low `maxPages` values first
@@ -79,6 +111,7 @@ This directory contains example configurations for various pagination strategies
 3. **Multiple Selectors**: Use comma-separated selectors for fallbacks
 4. **Rate Limiting**: Adjust `delay` to respect server limits
 5. **Pattern Testing**: Test patterns in browser console first
+6. **Link Extraction**: Use `depth: 1` to extract links from paginated pages
 
 ## Selector Examples
 

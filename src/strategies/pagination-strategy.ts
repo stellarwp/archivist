@@ -62,7 +62,7 @@ export class PaginationStrategy extends BaseStrategy {
     }
     
     // If using page parameter without pattern (but not if nextLinkSelector is specified)
-    if ((pagination.pageParam || pagination.maxPages) && !pagination.nextLinkSelector) {
+    else if ((pagination.pageParam || pagination.maxPages) && !pagination.nextLinkSelector && !pagination.pagePattern) {
       const startPage = pagination.startPage || 1;
       const maxPages = pagination.maxPages || 10;
       const pageParam = pagination.pageParam || 'page';
@@ -86,7 +86,7 @@ export class PaginationStrategy extends BaseStrategy {
     }
     
     // If using next link selector-based pagination
-    if (pagination.nextLinkSelector) {
+    else if (pagination.nextLinkSelector) {
       let currentUrl = sourceUrl;
       const maxPages = pagination.maxPages || 50;
       const visitedUrls = new Set<string>([sourceUrl]);
