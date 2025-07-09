@@ -1,0 +1,29 @@
+{
+  "archives": [
+    {
+      "name": "News Site with Confirmation",
+      "sources": {
+        "url": "https://example.com/news",
+        "strategy": "pagination",
+        "pagination": {
+          "pagePattern": "https://example.com/news/page/{page}",
+          "startPage": 1,
+          "maxPages": 10
+        },
+        "includePatterns": ["*/article/*", "*/story/*"],
+        "excludePatterns": ["*/author/*", "*/tag/*"]
+      },
+      "output": {
+        "directory": "./archive/news",
+        "format": "markdown",
+        "fileNaming": "title-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 3,
+    "delay": 2000,
+    "userAgent": "Archivist/1.0",
+    "timeout": 30000
+  }
+}
