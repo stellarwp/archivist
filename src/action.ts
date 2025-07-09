@@ -55,9 +55,8 @@ async function run(): Promise<void> {
     info(`🗄️ Archivist GitHub Action`);
     info(`📁 Config file: ${configFile}`);
     
-    // Set Pure API key if provided
+    // Pure API key will be passed via config
     if (pureApiKey) {
-      process.env.PURE_API_KEY = pureApiKey;
       info('🔑 Pure.md API key provided');
     } else {
       warning('No Pure.md API key provided - content extraction will be limited');
@@ -86,6 +85,15 @@ async function run(): Promise<void> {
       
       // Validate configuration
       config = ArchivistConfigSchema.parse(rawConfig);
+      
+      // Override Pure API key if provided via action input
+      if (pureApiKey) {
+        if (!config.pure) {
+          config.pure = {};
+        }
+        config.pure.apiKey = pureApiKey;
+      }
+      
       info(`✅ Configuration loaded: ${config.archives.length} archive(s) defined`);
       
       for (const archive of config.archives) {

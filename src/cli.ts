@@ -20,6 +20,7 @@ program
   .option('-o, --output <dir>', 'Output directory')
   .option('-f, --format <format>', 'Output format (markdown, html, json)')
   .option('--pure-key <key>', 'Pure.md API key')
+  .option('-d, --debug', 'Enable debug logging')
   .action(async (options) => {
     try {
       let config: ArchivistConfig = defaultConfig;
@@ -41,6 +42,14 @@ program
           config.pure = {};
         }
         config.pure.apiKey = options.pureKey;
+      }
+
+      // Set debug mode if specified
+      if (options.debug) {
+        config.crawl = {
+          ...config.crawl,
+          debug: true
+        };
       }
 
       // Apply CLI overrides to all archives if specified

@@ -84,8 +84,25 @@ describe('CLI Commands', () => {
     });
 
     it('should handle crawl with example config gracefully', async () => {
-      // Create a config first
-      await $`bun ${cliPath} init`.quiet();
+      // Create a custom config with shorter timeout
+      const configPath = join(testDir, 'archivist.config.json');
+      const config = {
+        archives: [{
+          name: "Quick Test",
+          sources: ["https://example.com/test"],
+          output: {
+            directory: "./test-output",
+            format: "json",
+            fileNaming: "url-based"
+          }
+        }],
+        crawl: {
+          maxConcurrency: 1,
+          delay: 100,
+          timeout: 2000  // Short timeout to fail quickly
+        }
+      };
+      await Bun.write(configPath, JSON.stringify(config, null, 2));
       
       // Run crawl - it will try to fetch example.com URLs
       const result = await $`bun ${cliPath} crawl`.quiet().nothrow();
@@ -93,8 +110,8 @@ describe('CLI Commands', () => {
       // The crawl should complete (exit code 0) even if URLs fail
       // This is because the crawler handles errors gracefully
       expect(result.exitCode).toBe(0);
-      expect(result.stdout.toString()).toContain('archive');
-    });
+      expect(result.stdout.toString()).toContain('Quick Test');
+    }, 10000);  // Give test 10 seconds total
 
     it('should accept config file parameter', async () => {
       // First create a config

@@ -16,6 +16,7 @@ import {
 import { shouldIncludeUrl } from './utils/pattern-matcher';
 import { StrategyFactory } from './strategies/strategy-factory';
 import type { SourceStrategyType } from './types/source-strategy';
+import { resolvePureApiKey } from './utils/pure-api-key';
 
 export class WebCrawler {
   private config: ArchivistConfig;
@@ -35,7 +36,7 @@ export class WebCrawler {
       
       const crawler = new ArchiveCrawler(
         archive,
-        this.config.crawl,
+        this.config,
         this.pureClient
       );
       
@@ -47,6 +48,7 @@ export class WebCrawler {
 
 class ArchiveCrawler {
   private archive: Archive;
+  private config: ArchivistConfig;
   private crawlConfig: ArchivistConfig['crawl'];
   private queue: Set<string> = new Set();
   private visited: Set<string> = new Set();
@@ -55,17 +57,24 @@ class ArchiveCrawler {
   private linkDiscoverer: LinkDiscoverer;
   private sourceMap: Map<string, Source> = new Map();
 
+  private debug(...args: any[]) {
+    if (this.crawlConfig.debug) {
+      console.log('[DEBUG]', new Date().toISOString(), ...args);
+    }
+  }
+
   constructor(
     archive: Archive,
-    crawlConfig: ArchivistConfig['crawl'],
+    config: ArchivistConfig,
     pureClient: PureMdClient
   ) {
     this.archive = archive;
-    this.crawlConfig = crawlConfig;
+    this.config = config;
+    this.crawlConfig = config.crawl;
     this.pureClient = pureClient;
     this.linkDiscoverer = new LinkDiscoverer({
-      userAgent: crawlConfig.userAgent,
-      timeout: crawlConfig.timeout,
+      userAgent: config.crawl.userAgent,
+      timeout: config.crawl.timeout,
     });
   }
 
@@ -92,7 +101,7 @@ class ArchiveCrawler {
         
         console.log(`Processing ${source.url} with ${strategyType} strategy`);
         
-        const result = await strategy.execute(source.url, source);
+        const result = await strategy.execute(source.url, { ...source, debug: this.crawlConfig.debug });
         
         if (result.urls.length > 0) {
           console.log(`Found ${result.urls.length} URLs from ${source.url}`);
@@ -122,11 +131,16 @@ class ArchiveCrawler {
     }
 
     const concurrencyLimit = this.crawlConfig.maxConcurrency;
-    const activeRequests: Promise<void>[] = [];
+    const activeRequests = new Set<Promise<void>>();
+    
+    this.debug(`Starting crawl with concurrency limit: ${concurrencyLimit}`);
+    this.debug(`Initial queue size: ${this.queue.size}`);
 
-    while (this.queue.size > 0 || activeRequests.length > 0) {
+    while (this.queue.size > 0 || activeRequests.size > 0) {
+      this.debug(`Loop iteration - Queue: ${this.queue.size}, Active: ${activeRequests.size}`);
+      
       // Start new requests up to concurrency limit
-      while (this.queue.size > 0 && activeRequests.length < concurrencyLimit) {
+      while (this.queue.size > 0 && activeRequests.size < concurrencyLimit) {
         const urlIterator = this.queue.values().next();
         if (urlIterator.done || !urlIterator.value) break;
         
@@ -135,24 +149,35 @@ class ArchiveCrawler {
         
         if (!this.visited.has(url)) {
           this.visited.add(url);
-          const request = this.crawlPage(url).catch(err => {
-            console.error(`Error crawling ${url}:`, err.message);
-          });
-          activeRequests.push(request);
+          this.debug(`Starting request for: ${url}`);
+          
+          const request = this.crawlPage(url)
+            .catch(err => {
+              console.error(`Error crawling ${url}:`, err.message);
+              this.debug(`Request failed for: ${url} - ${err.message}`);
+            })
+            .finally(() => {
+              // Remove from active requests when complete
+              this.debug(`Request completed for: ${url}`);
+              activeRequests.delete(request);
+              this.debug(`Active requests after removal: ${activeRequests.size}`);
+            });
+          activeRequests.add(request);
+          this.debug(`Active requests after addition: ${activeRequests.size}`);
+        } else {
+          this.debug(`Skipping already visited URL: ${url}`);
         }
       }
 
       // Wait for at least one request to complete
-      if (activeRequests.length > 0) {
+      if (activeRequests.size > 0) {
+        this.debug(`Waiting for one of ${activeRequests.size} requests to complete...`);
         await Promise.race(activeRequests);
-        // Remove completed requests
-        for (let i = activeRequests.length - 1; i >= 0; i--) {
-          if (await Promise.race([activeRequests[i], Promise.resolve('pending')]) !== 'pending') {
-            activeRequests.splice(i, 1);
-          }
-        }
+        this.debug(`At least one request completed, continuing loop`);
       }
     }
+    
+    this.debug(`Crawl complete - Visited: ${this.visited.size} URLs`);
 
     return this.results;
   }
@@ -171,7 +196,7 @@ class ArchiveCrawler {
 
     try {
       // Try to get content with Pure.md
-      if (this.pureClient && process.env.PURE_API_KEY) {
+      if (this.pureClient && resolvePureApiKey(this.config)) {
         try {
           const markdownContent = await this.pureClient.fetchContent(url);
           pageContent = parseMarkdownContent(markdownContent, url);

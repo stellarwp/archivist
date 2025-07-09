@@ -45,6 +45,7 @@ export const ArchivistConfigSchema = z.object({
     delay: z.number().min(0).default(1000),
     userAgent: z.string().default('Archivist/1.0'),
     timeout: z.number().min(1000).default(30000),
+    debug: z.boolean().default(false).optional(),
   }),
   pure: z.object({
     apiKey: z.string().optional(),
