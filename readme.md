@@ -871,7 +871,11 @@ Use when pages have "Next" or "Older Posts" links:
 
 ### Pre-Crawl Confirmation
 
-As of v0.1.0-beta.7, Archivist will always collect and display all URLs before crawling, giving you a chance to review and confirm:
+As of v0.1.0-beta.7, Archivist will always collect and display all URLs before crawling, giving you a chance to review and confirm. This includes:
+- Executing all pagination strategies to discover paginated pages
+- Following depth settings to discover linked content
+- Applying include/exclude patterns
+- Showing the complete list of URLs that will be processed
 
 ```
 Collecting URLs from 1 archive(s)...
