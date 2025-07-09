@@ -137,14 +137,6 @@ export class PaginationStrategy extends BaseStrategy {
     }
   }
   
-  private normalizeUrl(baseUrl: string, relativeUrl: string): string {
-    try {
-      return new URL(relativeUrl, baseUrl).href;
-    } catch {
-      return relativeUrl;
-    }
-  }
-  
   private async checkPageExists(url: string, retries: number = 1): Promise<boolean> {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {

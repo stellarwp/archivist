@@ -4,7 +4,7 @@ import { PaginationStrategy } from './pagination-strategy';
 import type { SourceStrategyType } from '../types/source-strategy';
 
 export class StrategyFactory {
-  private static strategies: Map<SourceStrategyType, BaseStrategy> = new Map([
+  private static strategies: Map<SourceStrategyType, BaseStrategy> = new Map<SourceStrategyType, BaseStrategy>([
     ['explorer', new ExplorerStrategy()],
     ['pagination', new PaginationStrategy()],
   ]);
