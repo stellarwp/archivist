@@ -40,8 +40,10 @@ export class WebCrawler {
         this.pureClient
       );
       
-      await crawler.crawl();
+      const results = await crawler.crawl();
       await crawler.save();
+      
+      console.log(`\n✅ Archive completed: ${results.length} pages processed`);
     }
   }
 
@@ -211,7 +213,8 @@ class ArchiveCrawler {
   }
 
   private async crawlPage(url: string): Promise<void> {
-    console.log(`Crawling: ${url}`);
+    const progress = `[${this.visited.size + 1}/${this.queue.size + this.visited.size}]`;
+    console.log(`${progress} Crawling: ${url}`);
     
     // Add delay between requests
     if (this.visited.size > 1) {
@@ -228,9 +231,10 @@ class ArchiveCrawler {
         try {
           const markdownContent = await this.pureClient.fetchContent(url);
           pageContent = parseMarkdownContent(markdownContent, url);
+          console.log(`  ✓ Content extracted successfully (${pageContent.content.length} chars)`);
         } catch (pureMdError) {
           // If Pure.md fails, just discover links with Cheerio
-          console.log(`Pure.md failed for ${url}, discovering links only`);
+          console.log(`  ⚠ Pure.md extraction failed, discovering links only`);
           const discovered = await this.linkDiscoverer.discoverLinks(url);
           
           // Create minimal page content with discovered links
@@ -247,7 +251,7 @@ class ArchiveCrawler {
         }
       } else {
         // No Pure.md API key, just discover links
-        console.log(`No Pure.md API key, discovering links only for ${url}`);
+        console.log(`  ℹ No Pure.md API key, discovering links only`);
         const discovered = await this.linkDiscoverer.discoverLinks(url);
         
         pageContent = {

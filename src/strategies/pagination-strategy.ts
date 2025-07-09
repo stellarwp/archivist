@@ -135,12 +135,20 @@ export class PaginationStrategy extends BaseStrategy {
     
     // Now extract links from all paginated pages
     this.debug(config, `Found ${pageUrls.length} paginated pages, extracting links from each...`);
+    console.log(`  📄 Processing ${pageUrls.length} paginated pages...`);
     
-    for (const pageUrl of pageUrls) {
+    for (let i = 0; i < pageUrls.length; i++) {
+      const pageUrl = pageUrls[i];
+      if (!pageUrl) continue;
+      
       try {
+        console.log(`    [${i + 1}/${pageUrls.length}] Extracting links from: ${pageUrl}`);
         this.debug(config, `Extracting links from page: ${pageUrl}`);
         const links = await this.extractLinksFromPage(pageUrl, config);
         this.debug(config, `Found ${links.length} links on ${pageUrl}`);
+        if (links.length > 0) {
+          console.log(`    ✓ Found ${links.length} links`);
+        }
         
         // Add all extracted links to the set (deduplication)
         links.forEach(link => allExtractedLinks.add(link));
@@ -150,6 +158,7 @@ export class PaginationStrategy extends BaseStrategy {
     }
     
     this.debug(config, `Pagination complete. Found ${allExtractedLinks.size} total unique links from ${pageUrls.length} pages`);
+    console.log(`  ✓ Pagination complete: ${allExtractedLinks.size} unique links collected`);
     return { urls: Array.from(allExtractedLinks) };
   }
   
