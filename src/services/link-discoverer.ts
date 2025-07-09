@@ -20,17 +20,85 @@ export interface LinkFilterOptions {
 }
 
 export class LinkDiscoverer {
-  constructor(private options: LinkDiscoveryOptions) {}
+  private axiosInstance: any;
+  private options: LinkDiscoveryOptions;
+  
+  constructor(options: LinkDiscoveryOptions | any) {
+    // Handle both old and new constructor patterns
+    if (options && typeof options.get === 'function') {
+      // It's an axios instance
+      this.axiosInstance = options;
+      this.options = {
+        userAgent: 'Archivist/1.0',
+        timeout: 30000,
+      };
+    } else if (options && typeof options === 'object') {
+      // It's LinkDiscoveryOptions
+      this.options = options;
+      this.axiosInstance = axios;
+    } else {
+      // Fallback for edge cases
+      this.options = {
+        userAgent: 'Archivist/1.0',
+        timeout: 30000,
+      };
+      this.axiosInstance = axios;
+    }
+  }
 
-  async discoverLinks(url: string, filterOptions?: LinkFilterOptions): Promise<DiscoveredLinks> {
+  async discover(url: string, selector: string = 'a[href]'): Promise<string[]> {
     try {
-      // Fetch the HTML content
-      const response = await axios.get(url, getAxiosConfig({
+      const config = this.axiosInstance.get && this.axiosInstance !== axios ? {} : getAxiosConfig({
         headers: {
           'User-Agent': this.options.userAgent,
         },
         timeout: this.options.timeout,
-      }));
+      });
+      
+      const response = await (this.axiosInstance || axios).get(url, config);
+      const html = response.data;
+      const $ = cheerio.load(html);
+      
+      const links: string[] = [];
+      $(selector).each((_, el) => {
+        const href = $(el).attr('href');
+        if (href) {
+          try {
+            const absoluteUrl = new URL(href, url).toString();
+            if (absoluteUrl.startsWith('http://') || absoluteUrl.startsWith('https://')) {
+              links.push(absoluteUrl);
+            }
+          } catch {
+            // Invalid URL, skip
+          }
+        }
+      });
+      
+      return links;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(`Failed to discover links from ${url}: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async discoverLinks(url: string, filterOptions?: LinkFilterOptions): Promise<DiscoveredLinks> {
+    try {
+      // Fetch the HTML content
+      const config = this.axiosInstance === axios ? getAxiosConfig({
+        headers: {
+          'User-Agent': this.options.userAgent,
+        },
+        timeout: this.options.timeout,
+      }) : {
+        headers: {
+          'User-Agent': this.options.userAgent,
+        },
+        timeout: this.options.timeout,
+      };
+      
+      const response = await this.axiosInstance.get(url, config);
 
       const html = response.data;
       const $ = cheerio.load(html);

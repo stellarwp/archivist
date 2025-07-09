@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tech News - Latest Articles</title>
+    <script>
+        // Simulating load more functionality
+        function loadMore() {
+            // In real implementation, this would fetch more articles via AJAX
+            window.location.href = '/news/articles?loaded=20';
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Tech News Daily</h1>
+        <nav>
+            <a href="/news/latest" class="active">Latest</a>
+            <a href="/news/trending">Trending</a>
+            <a href="/news/categories">Categories</a>
+        </nav>
+    </header>
+    
+    <main id="articles-container">
+        <article class="news-item" data-id="1001">
+            <h2><a href="/news/2024/01/20/apple-vision-pro-launch">Apple Vision Pro Launches Next Month</a></h2>
+            <p class="meta">January 20, 2024 | Technology</p>
+            <p>Apple's highly anticipated mixed reality headset is set to launch in February...</p>
+        </article>
+        
+        <article class="news-item" data-id="1002">
+            <h2><a href="/news/2024/01/19/ai-breakthrough">Major AI Breakthrough in Language Understanding</a></h2>
+            <p class="meta">January 19, 2024 | AI/ML</p>
+            <p>Researchers announce a significant advancement in natural language processing...</p>
+        </article>
+        
+        <article class="news-item" data-id="1003">
+            <h2><a href="/news/2024/01/19/spacex-starship">SpaceX Starship Successfully Completes Test Flight</a></h2>
+            <p class="meta">January 19, 2024 | Space</p>
+            <p>The latest test of SpaceX's Starship vehicle marks a major milestone...</p>
+        </article>
+        
+        <article class="news-item" data-id="1004">
+            <h2><a href="/news/2024/01/18/quantum-computing">IBM Announces 1000-Qubit Quantum Processor</a></h2>
+            <p class="meta">January 18, 2024 | Computing</p>
+            <p>IBM reveals its roadmap for scaling quantum computing systems...</p>
+        </article>
+        
+        <article class="news-item" data-id="1005">
+            <h2><a href="/news/2024/01/18/ev-market">Electric Vehicle Sales Hit Record High</a></h2>
+            <p class="meta">January 18, 2024 | Automotive</p>
+            <p>Global EV sales surpass expectations with 40% year-over-year growth...</p>
+        </article>
+    </main>
+    
+    <div class="load-more-container">
+        <button onclick="loadMore()" class="load-more-btn">Load More Articles</button>
+        <a href="/news/articles?loaded=20" class="load-more-link" style="display:none;">Load More Articles</a>
+        <div class="loading-indicator" style="display:none;">Loading...</div>
+    </div>
+    
+    <footer>
+        <p>Showing 5 of 847 articles</p>
+    </footer>
+</body>
+</html>

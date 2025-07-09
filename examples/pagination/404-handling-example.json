@@ -1,0 +1,47 @@
+{
+  "archives": [
+    {
+      "name": "Blog with 404 handling",
+      "description": "This example demonstrates how pagination automatically stops when encountering 404 errors",
+      "sources": [
+        {
+          "url": "https://example-blog.com/posts",
+          "strategy": "pagination",
+          "pagination": {
+            "pageParam": "page",
+            "startPage": 1,
+            "maxPages": 100
+          }
+        }
+      ],
+      "output": {
+        "directory": "./blog-archive",
+        "format": "markdown"
+      }
+    },
+    {
+      "name": "API Documentation with pattern pagination",
+      "description": "Pattern-based pagination that stops when pages don't exist",
+      "sources": [
+        {
+          "url": "https://api-docs.example.com",
+          "strategy": "pagination",
+          "pagination": {
+            "pagePattern": "https://api-docs.example.com/v1/page/{page}",
+            "startPage": 1,
+            "maxPages": 50
+          }
+        }
+      ],
+      "output": {
+        "directory": "./api-docs",
+        "format": "json"
+      }
+    }
+  ],
+  "crawl": {
+    "userAgent": "Archivist/1.0 (Pagination with 404 handling)",
+    "delay": 500,
+    "timeout": 30000
+  }
+}

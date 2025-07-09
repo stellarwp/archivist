@@ -13,8 +13,9 @@ import {
   titleToFilename, 
   hashFilename 
 } from './utils/file-naming';
-import { extractLinksFromPage } from './utils/link-extractor';
 import { shouldIncludeUrl } from './utils/pattern-matcher';
+import { StrategyFactory } from './strategies/strategy-factory';
+import type { SourceStrategyType } from './types/source-strategy';
 
 export class WebCrawler {
   private config: ArchivistConfig;
@@ -85,35 +86,34 @@ class ArchiveCrawler {
         this.queue.add(source);
         this.sourceMap.set(source, source);
       } else {
-        // Object source - always extract links from this page
-        console.log(`Collecting links from: ${source.url}`);
-        const links = await extractLinksFromPage({
-          url: source.url,
-          linkSelector: source.linkSelector || 'a[href]', // Default linkSelector
-          includePatterns: source.includePatterns,
-          excludePatterns: source.excludePatterns
-        });
+        // Object source - use strategy to determine how to process
+        const strategyType = (source.strategy || 'explorer') as SourceStrategyType;
+        const strategy = StrategyFactory.getStrategy(strategyType);
         
-        console.log(`Found ${links.length} links from ${source.url}`);
-        totalLinksCollected += links.length;
+        console.log(`Processing ${source.url} with ${strategyType} strategy`);
         
-        // Add collected links to queue (Set automatically handles duplicates)
-        const queueSizeBefore = this.queue.size;
-        for (const link of links) {
-          this.queue.add(link);
-          // Store the source configuration for these links
-          if (!this.sourceMap.has(link)) {
-            this.sourceMap.set(link, source);
+        const result = await strategy.execute(source.url, source);
+        
+        if (result.urls.length > 0) {
+          console.log(`Found ${result.urls.length} URLs from ${source.url}`);
+          totalLinksCollected += result.urls.length;
+          
+          // Add collected URLs to queue (Set automatically handles duplicates)
+          const queueSizeBefore = this.queue.size;
+          for (const url of result.urls) {
+            this.queue.add(url);
+            // Store the source configuration for these URLs
+            if (!this.sourceMap.has(url)) {
+              this.sourceMap.set(url, source);
+            }
+          }
+          const newLinksAdded = this.queue.size - queueSizeBefore;
+          uniqueLinksAdded += newLinksAdded;
+          
+          if (newLinksAdded < result.urls.length) {
+            console.log(`  Added ${newLinksAdded} unique URLs (${result.urls.length - newLinksAdded} duplicates removed)`);
           }
         }
-        const newLinksAdded = this.queue.size - queueSizeBefore;
-        uniqueLinksAdded += newLinksAdded;
-        
-        if (newLinksAdded < links.length) {
-          console.log(`  Added ${newLinksAdded} unique links (${links.length - newLinksAdded} duplicates removed)`);
-        }
-        
-        // Object sources are used for link collection - don't add the source URL itself to queue
       }
     }
 

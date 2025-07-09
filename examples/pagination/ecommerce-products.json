@@ -1,0 +1,44 @@
+{
+  "archives": [
+    {
+      "name": "Electronics Product Catalog",
+      "sources": {
+        "url": "https://shop.example.com/category/electronics",
+        "strategy": "pagination",
+        "pagination": {
+          "pageParam": "p",
+          "startPage": 1,
+          "maxPages": 100
+        }
+      },
+      "output": {
+        "directory": "./archive/products/electronics",
+        "format": "json",
+        "fileNaming": "url-based"
+      }
+    },
+    {
+      "name": "Books Product Catalog",
+      "sources": {
+        "url": "https://shop.example.com/category/books",
+        "strategy": "pagination",
+        "pagination": {
+          "pageParam": "page",
+          "startPage": 1,
+          "maxPages": 200
+        }
+      },
+      "output": {
+        "directory": "./archive/products/books",
+        "format": "json",
+        "fileNaming": "url-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 2,
+    "delay": 3000,
+    "userAgent": "Archivist/1.0 (Product Crawler)",
+    "timeout": 45000
+  }
+}

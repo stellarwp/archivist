@@ -13,12 +13,46 @@ export async function extractLinksFromPage(options: LinkExtractionOptions): Prom
   const { url, linkSelector, includePatterns, excludePatterns, userAgent = 'Archivist/1.0', timeout = 30000 } = options;
   
   try {
-    // Use LinkDiscoverer to extract links with proper Cheerio parsing
+    // Create LinkDiscoverer instance
     const linkDiscoverer = new LinkDiscoverer({
       userAgent,
       timeout,
     });
     
+    // Ensure we have the discoverLinks method
+    if (!linkDiscoverer || typeof linkDiscoverer.discoverLinks !== 'function') {
+      // Fallback: import and use discover method directly
+      const axios = (await import('axios')).default;
+      const cheerio = await import('cheerio');
+      const { shouldIncludeUrl } = await import('./pattern-matcher');
+      
+      const response = await axios.get(url, {
+        headers: { 'User-Agent': userAgent },
+        timeout,
+      });
+      
+      const $ = cheerio.load(response.data);
+      const links = new Set<string>();
+      
+      $(linkSelector || 'a[href]').each((_, el) => {
+        const href = $(el).attr('href');
+        if (href) {
+          try {
+            const absoluteUrl = new URL(href, url).toString();
+            if ((absoluteUrl.startsWith('http://') || absoluteUrl.startsWith('https://')) &&
+                shouldIncludeUrl(absoluteUrl, includePatterns, excludePatterns)) {
+              links.add(absoluteUrl);
+            }
+          } catch {
+            // Invalid URL, skip
+          }
+        }
+      });
+      
+      return Array.from(links);
+    }
+    
+    // Use the discoverLinks method
     const discovered = await linkDiscoverer.discoverLinks(url, {
       includePatterns,
       excludePatterns,

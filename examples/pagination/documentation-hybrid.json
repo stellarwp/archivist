@@ -1,0 +1,55 @@
+{
+  "archives": [
+    {
+      "name": "API Documentation Complete",
+      "sources": [
+        {
+          "url": "https://docs.example.com/api/overview",
+          "strategy": "explorer",
+          "linkSelector": ".sidebar-nav a, .toc a",
+          "depth": 2
+        },
+        {
+          "url": "https://docs.example.com/api/reference",
+          "strategy": "pagination",
+          "pagination": {
+            "nextLinkSelector": "a.next-page, a[rel='next'], .pagination-next",
+            "maxPages": 50
+          }
+        },
+        {
+          "url": "https://docs.example.com/tutorials",
+          "strategy": "pagination",
+          "pagination": {
+            "pageParam": "section",
+            "startPage": 1,
+            "maxPages": 20
+          }
+        },
+        {
+          "url": "https://docs.example.com/changelog",
+          "strategy": "pagination",
+          "pagination": {
+            "pagePattern": "https://docs.example.com/changelog/{page}",
+            "startPage": 2024,
+            "maxPages": 5
+          }
+        }
+      ],
+      "output": {
+        "directory": "./archive/api-docs",
+        "format": "markdown",
+        "fileNaming": "url-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 4,
+    "delay": 1000,
+    "userAgent": "Archivist/1.0 (Documentation Crawler)",
+    "timeout": 30000
+  },
+  "pure": {
+    "apiKey": "${PURE_API_KEY}"
+  }
+}

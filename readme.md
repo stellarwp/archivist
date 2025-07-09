@@ -188,8 +188,10 @@ Sources can be:
   - **name** - Optional friendly name for the source
   - **depth** - How many levels deep to crawl (0 = don't crawl the source page itself)
   - **linkSelector** - CSS selector to find links to crawl (simplified support, primarily for link collection)
-  - **includePatterns** - Array of regex patterns - only links matching at least one will be followed
-  - **excludePatterns** - Array of regex patterns - links matching any of these will be excluded
+  - **includePatterns** - Array of patterns (minimatch or regex) - only links matching at least one will be followed
+  - **excludePatterns** - Array of patterns (minimatch or regex) - links matching any of these will be excluded
+  - **strategy** - Source crawling strategy: `"explorer"` (default) or `"pagination"`
+  - **pagination** - Configuration for pagination strategy (see [Source Strategies](#source-strategies))
 
 #### Output
 - **directory** - Where to save archived files
@@ -458,6 +460,412 @@ Pattern behavior:
 - Patterns are applied to the full URL
 - Both arrays are optional - omit for no filtering
 - Minimatch patterns are detected automatically - use regex syntax for regex patterns
+
+## Source Strategies
+
+Archivist supports different strategies for processing sources, allowing you to handle various website structures including paginated content.
+
+### Explorer Strategy (Default)
+
+The explorer strategy extracts all links from a page at once. This is the default behavior and ideal for:
+- Site indexes and sitemaps
+- Category pages with article listings
+- Navigation pages
+- Any page where all links are visible on a single page
+
+```json
+{
+  "sources": {
+    "url": "https://docs.example.com/index",
+    "strategy": "explorer",
+    "linkSelector": "a.doc-link",
+    "includePatterns": ["*/api/*", "*/guides/*"]
+  }
+}
+```
+
+### Pagination Strategy
+
+The pagination strategy follows paginated content across multiple pages. Perfect for:
+- Blog archives with numbered pages
+- API documentation with paginated endpoints
+- Forum threads
+- Search results
+- Any content split across multiple pages
+
+#### Pattern-Based Pagination
+
+Use when page URLs follow a predictable pattern:
+
+```json
+{
+  "sources": {
+    "url": "https://blog.example.com/posts",
+    "strategy": "pagination",
+    "pagination": {
+      "pagePattern": "https://blog.example.com/posts/page/{page}",
+      "startPage": 1,
+      "maxPages": 10
+    }
+  }
+}
+```
+
+#### Query Parameter Pagination
+
+Use when pagination uses URL query parameters:
+
+```json
+{
+  "sources": {
+    "url": "https://forum.example.com/topics",
+    "strategy": "pagination",
+    "pagination": {
+      "pageParam": "page",
+      "startPage": 1,
+      "maxPages": 20
+    }
+  }
+}
+```
+
+#### Next Link Pagination
+
+Use when pages have "Next" or "Older Posts" links:
+
+```json
+{
+  "sources": {
+    "url": "https://news.example.com/archive",
+    "strategy": "pagination",
+    "pagination": {
+      "nextLinkSelector": "a.next-page, a[rel='next']",
+      "maxPages": 50
+    }
+  }
+}
+```
+
+### Pagination Configuration Options
+
+- **pagePattern** - URL pattern with `{page}` placeholder for page numbers
+- **pageParam** - Query parameter name for page numbers (default: "page")
+- **startPage** - First page number (default: 1)
+- **maxPages** - Maximum pages to crawl (default: 10 for patterns, 50 for next links)
+- **nextLinkSelector** - CSS selector for finding next page links
+
+### Complete Examples
+
+#### Blog with Numbered Pages
+
+```json
+{
+  "archives": [{
+    "name": "Tech Blog Archive",
+    "sources": {
+      "url": "https://techblog.example.com",
+      "strategy": "pagination",
+      "pagination": {
+        "pagePattern": "https://techblog.example.com/page/{page}",
+        "startPage": 1,
+        "maxPages": 25
+      },
+      "includePatterns": ["*/2024/*", "*/2023/*"],
+      "excludePatterns": ["*/draft/*"]
+    },
+    "output": {
+      "directory": "./archive/blog",
+      "format": "markdown"
+    }
+  }]
+}
+```
+
+#### API Documentation with Query Parameters
+
+```json
+{
+  "archives": [{
+    "name": "API Reference",
+    "sources": {
+      "url": "https://api.example.com/docs/endpoints",
+      "strategy": "pagination",
+      "pagination": {
+        "pageParam": "offset",
+        "startPage": 0,
+        "maxPages": 10
+      }
+    },
+    "output": {
+      "directory": "./archive/api-docs",
+      "format": "json"
+    }
+  }]
+}
+```
+
+#### Forum with Next Links
+
+```json
+{
+  "archives": [{
+    "name": "Support Forum",
+    "sources": {
+      "url": "https://forum.example.com/category/help",
+      "strategy": "pagination",
+      "pagination": {
+        "nextLinkSelector": "a.pagination-next",
+        "maxPages": 100
+      }
+    },
+    "output": {
+      "directory": "./archive/forum",
+      "format": "markdown"
+    }
+  }]
+}
+```
+
+#### Mixed Strategies
+
+```json
+{
+  "archives": [{
+    "name": "Complete Documentation",
+    "sources": [
+      {
+        "url": "https://docs.example.com/index",
+        "strategy": "explorer",
+        "linkSelector": "nav a"
+      },
+      {
+        "url": "https://docs.example.com/changelog",
+        "strategy": "pagination",
+        "pagination": {
+          "pageParam": "page",
+          "maxPages": 5
+        }
+      }
+    ],
+    "output": {
+      "directory": "./archive/docs"
+    }
+  }]
+}
+```
+
+### Additional Pagination Examples
+
+#### E-commerce Category Pages
+
+```json
+{
+  "archives": [{
+    "name": "Product Catalog",
+    "sources": {
+      "url": "https://shop.example.com/category/electronics",
+      "strategy": "pagination",
+      "pagination": {
+        "pageParam": "p",
+        "startPage": 1,
+        "maxPages": 50,
+        "perPageParam": "per_page"
+      }
+    },
+    "output": {
+      "directory": "./archive/products",
+      "format": "json"
+    }
+  }]
+}
+```
+
+#### Search Results with Offset
+
+```json
+{
+  "archives": [{
+    "name": "Search Results Archive",
+    "sources": {
+      "url": "https://search.example.com/results?q=javascript",
+      "strategy": "pagination",
+      "pagination": {
+        "pageParam": "start",
+        "startPage": 0,
+        "maxPages": 20,
+        "pageIncrement": 10
+      }
+    },
+    "output": {
+      "directory": "./archive/search-results"
+    }
+  }]
+}
+```
+
+#### Forum Threads with Offset-Based Pagination
+
+```json
+{
+  "archives": [{
+    "name": "Forum Archive",
+    "sources": {
+      "url": "https://forum.example.com/category/general",
+      "strategy": "pagination",
+      "pagination": {
+        "pageParam": "offset",
+        "startPage": 0,
+        "maxPages": 100,
+        "pageIncrement": 20
+      },
+      "includePatterns": ["*/topic/*"],
+      "excludePatterns": ["*/user/*", "*/admin/*"]
+    },
+    "output": {
+      "directory": "./archive/forum"
+    }
+  }]
+}
+```
+
+#### News Site with Load More Button
+
+```json
+{
+  "archives": [{
+    "name": "News Archive",
+    "sources": {
+      "url": "https://news.example.com/latest",
+      "strategy": "pagination",
+      "pagination": {
+        "nextLinkSelector": "a.load-more-link, button.load-more[onclick*='href']",
+        "maxPages": 50
+      }
+    },
+    "output": {
+      "directory": "./archive/news",
+      "format": "markdown"
+    }
+  }]
+}
+```
+
+#### Infinite Scroll Gallery
+
+```json
+{
+  "archives": [{
+    "name": "Photo Gallery",
+    "sources": {
+      "url": "https://gallery.example.com/photos",
+      "strategy": "pagination",
+      "pagination": {
+        "nextLinkSelector": "#infinite-scroll-next, .next-batch, noscript a[href*='batch']",
+        "maxPages": 100
+      }
+    },
+    "output": {
+      "directory": "./archive/gallery",
+      "format": "json"
+    }
+  }]
+}
+```
+
+#### Documentation with Section-Based Navigation
+
+```json
+{
+  "archives": [{
+    "name": "API Documentation",
+    "sources": {
+      "url": "https://api.example.com/docs/reference",
+      "strategy": "pagination",
+      "pagination": {
+        "pageParam": "section",
+        "startPage": 1,
+        "maxPages": 10
+      }
+    },
+    "output": {
+      "directory": "./archive/api-docs"
+    }
+  }]
+}
+```
+
+#### Blog with Date-Based URLs
+
+```json
+{
+  "archives": [{
+    "name": "Blog Archive 2024",
+    "sources": {
+      "url": "https://blog.example.com/2024/01",
+      "strategy": "pagination",
+      "pagination": {
+        "pagePattern": "https://blog.example.com/2024/01/page/{page}",
+        "startPage": 1,
+        "maxPages": 25
+      },
+      "includePatterns": ["*/2024/01/*"],
+      "excludePatterns": ["*/tag/*", "*/author/*"]
+    },
+    "output": {
+      "directory": "./archive/blog-2024-01"
+    }
+  }]
+}
+```
+
+#### Hybrid Pagination (Multiple Selectors)
+
+```json
+{
+  "archives": [{
+    "name": "Complex Site Archive",
+    "sources": {
+      "url": "https://complex.example.com/content",
+      "strategy": "pagination",
+      "pagination": {
+        "nextLinkSelector": "a.next, a[rel='next'], .pagination a:last-child, button.more",
+        "maxPages": 75
+      }
+    },
+    "output": {
+      "directory": "./archive/complex-site"
+    }
+  }]
+}
+```
+
+### Pagination Tips and Best Practices
+
+1. **Choose the Right Strategy**:
+   - Use `pagePattern` when URLs follow a predictable pattern
+   - Use `pageParam` for query parameter-based pagination
+   - Use `nextLinkSelector` for following "Next" or "Load More" links
+
+2. **Selector Optimization**:
+   - Use specific selectors to avoid false matches
+   - Combine multiple selectors with commas for fallbacks
+   - Test selectors in browser DevTools first
+
+3. **Performance Considerations**:
+   - Set appropriate `maxPages` limits to avoid infinite loops
+   - Use `delay` between requests to respect rate limits
+   - Adjust `maxConcurrency` based on site capacity
+
+4. **Common Patterns**:
+   - Offset pagination: `pageParam: "offset"` with `pageIncrement`
+   - Page numbers: `pageParam: "page"` or `pageParam: "p"`
+   - Load more buttons: `nextLinkSelector: "button.load-more, a.load-more"`
+   - Infinite scroll: Look for hidden fallback links or noscript tags
+
+5. **Debugging**:
+   - Start with small `maxPages` values during testing
+   - Use browser DevTools to inspect pagination elements
+   - Check for JavaScript-rendered pagination links
 
 ## CLI Reference
 

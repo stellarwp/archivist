@@ -10,6 +10,14 @@ const SourceSchema = z.union([
     linkSelector: z.string().optional().describe('CSS selector to find links to crawl'),
     includePatterns: z.array(z.string()).optional().describe('Regex patterns - only follow links matching these'),
     excludePatterns: z.array(z.string()).optional().describe('Regex patterns - exclude links matching these'),
+    strategy: z.enum(['explorer', 'pagination']).default('explorer').optional().describe('Source crawling strategy'),
+    pagination: z.object({
+      startPage: z.number().default(1).optional(),
+      maxPages: z.number().optional(),
+      pageParam: z.string().default('page').optional(),
+      pagePattern: z.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
+      nextLinkSelector: z.string().optional().describe('CSS selector for next page link'),
+    }).optional().describe('Configuration for pagination strategy'),
   })
 ]);
 
