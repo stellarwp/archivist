@@ -122,11 +122,11 @@ class ArchiveCrawler {
     }
 
     const concurrencyLimit = this.crawlConfig.maxConcurrency;
-    const activeRequests: Promise<void>[] = [];
+    const activeRequests = new Set<Promise<void>>();
 
-    while (this.queue.size > 0 || activeRequests.length > 0) {
+    while (this.queue.size > 0 || activeRequests.size > 0) {
       // Start new requests up to concurrency limit
-      while (this.queue.size > 0 && activeRequests.length < concurrencyLimit) {
+      while (this.queue.size > 0 && activeRequests.size < concurrencyLimit) {
         const urlIterator = this.queue.values().next();
         if (urlIterator.done || !urlIterator.value) break;
         
@@ -135,22 +135,21 @@ class ArchiveCrawler {
         
         if (!this.visited.has(url)) {
           this.visited.add(url);
-          const request = this.crawlPage(url).catch(err => {
-            console.error(`Error crawling ${url}:`, err.message);
-          });
-          activeRequests.push(request);
+          const request = this.crawlPage(url)
+            .catch(err => {
+              console.error(`Error crawling ${url}:`, err.message);
+            })
+            .finally(() => {
+              // Remove from active requests when complete
+              activeRequests.delete(request);
+            });
+          activeRequests.add(request);
         }
       }
 
       // Wait for at least one request to complete
-      if (activeRequests.length > 0) {
+      if (activeRequests.size > 0) {
         await Promise.race(activeRequests);
-        // Remove completed requests
-        for (let i = activeRequests.length - 1; i >= 0; i--) {
-          if (await Promise.race([activeRequests[i], Promise.resolve('pending')]) !== 'pending') {
-            activeRequests.splice(i, 1);
-          }
-        }
       }
     }
 
