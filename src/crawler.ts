@@ -355,20 +355,27 @@ class ArchiveCrawler {
   }
 
   async collectUrls(): Promise<string[]> {
-    // Normalize sources to array and process them
+    // This method simulates the full crawl process to collect all URLs
+    // without actually fetching content from Pure.md
+    
+    // Reset queues
+    this.queue = new Set();
+    this.visited = new Set();
+    this.sourceMap = new Map();
+    
+    // Normalize sources to array
     const sources = Array.isArray(this.archive.sources) 
       ? this.archive.sources 
       : [this.archive.sources];
     
-    const allUrls: string[] = [];
-    
-    // Process sources - collect URLs without crawling
+    // Process sources - some might be link collection pages
     for (const source of sources) {
       if (typeof source === 'string') {
-        // Simple URL - add directly
-        allUrls.push(source);
+        // Simple URL - add directly to queue
+        this.queue.add(source);
+        this.sourceMap.set(source, source);
       } else {
-        // Object source - use strategy to collect URLs
+        // Object source - use strategy to determine how to process
         const strategyType = (source.strategy || 'explorer') as SourceStrategyType;
         const strategy = StrategyFactory.getStrategy(strategyType);
         
@@ -379,7 +386,15 @@ class ArchiveCrawler {
           
           if (result.urls.length > 0) {
             console.log(`  → Found ${result.urls.length} URLs`);
-            allUrls.push(...result.urls);
+            
+            // Add collected URLs to queue
+            for (const url of result.urls) {
+              this.queue.add(url);
+              // Store the source configuration for these URLs
+              if (!this.sourceMap.has(url)) {
+                this.sourceMap.set(url, source);
+              }
+            }
           }
         } catch (error) {
           console.error(`  → Error collecting from ${source.url}:`, error);
@@ -387,10 +402,77 @@ class ArchiveCrawler {
       }
     }
     
-    // Remove duplicates
-    const uniqueUrls = Array.from(new Set(allUrls));
+    // Now simulate the crawl to handle depth traversal
+    const collectedUrls = new Set<string>();
+    const processedForDepth = new Set<string>();
     
-    return uniqueUrls;
+    // Add all queued URLs to collected
+    for (const url of this.queue) {
+      collectedUrls.add(url);
+    }
+    
+    // Process depth if needed (discover links from pages)
+    while (this.queue.size > 0) {
+      const url = this.queue.values().next().value;
+      if (!url) break;
+      
+      this.queue.delete(url);
+      
+      // Skip if already processed for depth
+      if (processedForDepth.has(url)) continue;
+      processedForDepth.add(url);
+      
+      // Find the source configuration for this URL
+      const source = this.findSourceForUrl(url);
+      const depth = this.getSourceDepth(source);
+      
+      if (depth > 0 && source) {
+        try {
+          // Add delay between requests during collection
+          if (processedForDepth.size > 1) {
+            await new Promise(resolve => setTimeout(resolve, this.crawlConfig.delay));
+          }
+          
+          // Discover links from this page
+          const discovered = await this.linkDiscoverer.discoverLinks(url);
+          
+          const sourceUrl = typeof source === 'string' ? source : source.url;
+          const currentDepth = this.getDepth(url, sourceUrl);
+          
+          if (currentDepth < depth) {
+            // Apply include/exclude patterns to discovered links
+            let filteredLinks = discovered.links;
+            
+            if (typeof source !== 'string' && (source.includePatterns || source.excludePatterns)) {
+              filteredLinks = this.filterLinks(
+                discovered.links, 
+                source.includePatterns,
+                source.excludePatterns
+              );
+            }
+            
+            // Add filtered links to queue and collected URLs
+            for (const link of filteredLinks) {
+              if (this.isSameDomain(link, url)) {
+                collectedUrls.add(link);
+                if (!processedForDepth.has(link)) {
+                  this.queue.add(link);
+                  // Inherit source configuration for child pages
+                  if (!this.sourceMap.has(link)) {
+                    this.sourceMap.set(link, source);
+                  }
+                }
+              }
+            }
+          }
+        } catch (error) {
+          // Ignore link discovery errors during collection
+          this.debug(`Failed to discover links from ${url}:`, error);
+        }
+      }
+    }
+    
+    return Array.from(collectedUrls);
   }
 
   async save(): Promise<void> {
