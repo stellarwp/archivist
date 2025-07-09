@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name('archivist')
   .description('Archive web content for LLM context')
-  .version('0.1.0-beta.4');
+  .version('0.1.0-beta.5');
 
 program
   .command('crawl')

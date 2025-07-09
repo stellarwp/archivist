@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.5] - 2025-01-09
+
+### Added
+
+- **Source Strategies for Flexible Crawling**
+  - Introduced pluggable source strategies architecture
+  - Added pagination strategy for handling paginated content
+  - Support for dynamic pagination patterns with URL templates
+  - Comprehensive examples and fixtures for pagination scenarios
+
+### Fixed
+
+- **TypeScript Type Errors**
+  - Resolved type compatibility issues across the codebase
+  - Fixed axios mock types in pagination strategy tests
+  - Improved type safety in link discovery components
+
+- **Test Suite Improvements**
+  - Enhanced LinkDiscoverer tests for better environment compatibility
+  - Added fallback implementations for cross-platform support
+  - Improved test isolation using spyOn instead of mock.module
+  - Fixed package installation tests for CI environments
+
+- **Error Handling**
+  - Added proper 404 handling to pagination strategy
+  - Improved robustness in LinkDiscoverer constructor options
+
+### Changed
+
+- **Test Infrastructure**
+  - Added TypeScript type checking to test suite
+  - Added comprehensive CLI and package installation tests
+  - Improved test coverage for source strategies
+
 ## [0.1.0-beta.4] - 2025-01-06
 
 ### Changed
