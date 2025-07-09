@@ -44,6 +44,34 @@ export class WebCrawler {
       await crawler.save();
     }
   }
+
+  async collectAllUrls(): Promise<string[]> {
+    const allUrls: string[] = [];
+    
+    for (const archive of this.config.archives) {
+      console.log(`\nCollecting URLs for archive: ${archive.name}`);
+      console.log('-'.repeat(40));
+      
+      const crawler = new ArchiveCrawler(
+        archive,
+        this.config,
+        this.pureClient
+      );
+      
+      const urls = await crawler.collectUrls();
+      allUrls.push(...urls);
+      
+      console.log(`Found ${urls.length} URLs in ${archive.name}`);
+    }
+    
+    // Remove duplicates
+    const uniqueUrls = Array.from(new Set(allUrls));
+    if (uniqueUrls.length < allUrls.length) {
+      console.log(`\nRemoved ${allUrls.length - uniqueUrls.length} duplicate URLs across archives`);
+    }
+    
+    return uniqueUrls;
+  }
 }
 
 class ArchiveCrawler {
@@ -324,6 +352,45 @@ class ArchiveCrawler {
     }
 
     return links.filter(link => shouldIncludeUrl(link, includePatterns, excludePatterns));
+  }
+
+  async collectUrls(): Promise<string[]> {
+    // Normalize sources to array and process them
+    const sources = Array.isArray(this.archive.sources) 
+      ? this.archive.sources 
+      : [this.archive.sources];
+    
+    const allUrls: string[] = [];
+    
+    // Process sources - collect URLs without crawling
+    for (const source of sources) {
+      if (typeof source === 'string') {
+        // Simple URL - add directly
+        allUrls.push(source);
+      } else {
+        // Object source - use strategy to collect URLs
+        const strategyType = (source.strategy || 'explorer') as SourceStrategyType;
+        const strategy = StrategyFactory.getStrategy(strategyType);
+        
+        console.log(`  Collecting from ${source.url} (${strategyType} strategy)`);
+        
+        try {
+          const result = await strategy.execute(source.url, { ...source, debug: this.crawlConfig.debug });
+          
+          if (result.urls.length > 0) {
+            console.log(`  → Found ${result.urls.length} URLs`);
+            allUrls.push(...result.urls);
+          }
+        } catch (error) {
+          console.error(`  → Error collecting from ${source.url}:`, error);
+        }
+      }
+    }
+    
+    // Remove duplicates
+    const uniqueUrls = Array.from(new Set(allUrls));
+    
+    return uniqueUrls;
   }
 
   async save(): Promise<void> {

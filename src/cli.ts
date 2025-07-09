@@ -21,6 +21,8 @@ program
   .option('-f, --format <format>', 'Output format (markdown, html, json)')
   .option('--pure-key <key>', 'Pure.md API key')
   .option('-d, --debug', 'Enable debug logging')
+  .option('--dry-run', 'Collect and display all URLs without crawling')
+  .option('--no-confirm', 'Skip confirmation prompt and proceed directly')
   .action(async (options) => {
     try {
       let config: ArchivistConfig = defaultConfig;
@@ -70,9 +72,46 @@ program
         process.exit(1);
       }
 
-      console.log(`Starting crawl of ${config.archives.length} archive(s)...`);
+      // Always collect URLs first and show them
+      console.log(`Collecting URLs from ${config.archives.length} archive(s)...`);
+      if (options.dryRun) {
+        console.log('(Dry run mode - no content will be fetched)');
+      }
+      console.log('');
       
       const crawler = new WebCrawler(config);
+      const allUrls = await crawler.collectAllUrls();
+      
+      if (allUrls.length === 0) {
+        console.log('No URLs found to crawl.');
+        return;
+      }
+      
+      console.log(`\nFound ${allUrls.length} URLs to crawl:`);
+      console.log('='.repeat(50));
+      allUrls.forEach((url, index) => {
+        console.log(`${(index + 1).toString().padStart(4, ' ')}. ${url}`);
+      });
+      console.log('='.repeat(50));
+      
+      // Ask for confirmation unless --no-confirm is used
+      if (options.confirm !== false) {
+        console.log(`\nTotal URLs to be processed: ${allUrls.length}`);
+        const response = prompt('\nDo you want to proceed with the crawl? (yes/no): ');
+        
+        if (!response || !['yes', 'y'].includes(response.toLowerCase())) {
+          console.log('Crawl cancelled.');
+          return;
+        }
+      }
+      
+      // If dry-run, stop here
+      if (options.dryRun) {
+        console.log('\nDry run complete. No content was fetched.');
+        return;
+      }
+      
+      console.log(`\nStarting crawl of ${config.archives.length} archive(s)...`);
       await crawler.crawlAll();
       
       console.log(`\nAll archives processed successfully!`);
