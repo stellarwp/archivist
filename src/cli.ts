@@ -5,8 +5,24 @@ import { ArchivistConfigSchema, defaultConfig } from '../archivist.config';
 import { WebCrawler } from './crawler';
 import { existsSync } from 'fs';
 import path from 'path';
+import readline from 'readline';
 
 const program = new Command();
+
+// Helper function for user input
+async function askQuestion(question: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
+}
 
 program
   .name('archivist')
@@ -97,7 +113,8 @@ program
       // Ask for confirmation unless --no-confirm is used
       if (options.confirm !== false) {
         console.log(`\nTotal URLs to be processed: ${allUrls.length}`);
-        const response = prompt('\nDo you want to proceed with the crawl? (yes/no): ');
+        console.log('─'.repeat(50));
+        const response = await askQuestion('Do you want to proceed with the crawl? (yes/no): ');
         
         if (!response || !['yes', 'y'].includes(response.toLowerCase())) {
           console.log('Crawl cancelled.');
