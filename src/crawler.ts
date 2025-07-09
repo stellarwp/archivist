@@ -55,6 +55,12 @@ class ArchiveCrawler {
   private linkDiscoverer: LinkDiscoverer;
   private sourceMap: Map<string, Source> = new Map();
 
+  private debug(...args: any[]) {
+    if (this.crawlConfig.debug) {
+      console.log('[DEBUG]', new Date().toISOString(), ...args);
+    }
+  }
+
   constructor(
     archive: Archive,
     crawlConfig: ArchivistConfig['crawl'],
@@ -92,7 +98,7 @@ class ArchiveCrawler {
         
         console.log(`Processing ${source.url} with ${strategyType} strategy`);
         
-        const result = await strategy.execute(source.url, source);
+        const result = await strategy.execute(source.url, { ...source, debug: this.crawlConfig.debug });
         
         if (result.urls.length > 0) {
           console.log(`Found ${result.urls.length} URLs from ${source.url}`);
@@ -123,8 +129,13 @@ class ArchiveCrawler {
 
     const concurrencyLimit = this.crawlConfig.maxConcurrency;
     const activeRequests = new Set<Promise<void>>();
+    
+    this.debug(`Starting crawl with concurrency limit: ${concurrencyLimit}`);
+    this.debug(`Initial queue size: ${this.queue.size}`);
 
     while (this.queue.size > 0 || activeRequests.size > 0) {
+      this.debug(`Loop iteration - Queue: ${this.queue.size}, Active: ${activeRequests.size}`);
+      
       // Start new requests up to concurrency limit
       while (this.queue.size > 0 && activeRequests.size < concurrencyLimit) {
         const urlIterator = this.queue.values().next();
@@ -135,23 +146,35 @@ class ArchiveCrawler {
         
         if (!this.visited.has(url)) {
           this.visited.add(url);
+          this.debug(`Starting request for: ${url}`);
+          
           const request = this.crawlPage(url)
             .catch(err => {
               console.error(`Error crawling ${url}:`, err.message);
+              this.debug(`Request failed for: ${url} - ${err.message}`);
             })
             .finally(() => {
               // Remove from active requests when complete
+              this.debug(`Request completed for: ${url}`);
               activeRequests.delete(request);
+              this.debug(`Active requests after removal: ${activeRequests.size}`);
             });
           activeRequests.add(request);
+          this.debug(`Active requests after addition: ${activeRequests.size}`);
+        } else {
+          this.debug(`Skipping already visited URL: ${url}`);
         }
       }
 
       // Wait for at least one request to complete
       if (activeRequests.size > 0) {
+        this.debug(`Waiting for one of ${activeRequests.size} requests to complete...`);
         await Promise.race(activeRequests);
+        this.debug(`At least one request completed, continuing loop`);
       }
     }
+    
+    this.debug(`Crawl complete - Visited: ${this.visited.size} URLs`);
 
     return this.results;
   }

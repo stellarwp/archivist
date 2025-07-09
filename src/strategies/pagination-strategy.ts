@@ -18,12 +18,16 @@ export class PaginationStrategy extends BaseStrategy {
     const pagination = config.pagination || {};
     const urls: string[] = [];
     
+    this.debug(config, `Starting pagination for ${sourceUrl}`);
+    this.debug(config, `Pagination config:`, JSON.stringify(pagination));
+    
     // Add the source URL itself to the results
     urls.push(sourceUrl);
     
     // Check if pagination config is completely empty
     if (!pagination || Object.keys(pagination).length === 0) {
       // No pagination configured, return just the source URL
+      this.debug(config, `No pagination config, returning source URL only`);
       return { urls };
     }
     
@@ -32,15 +36,22 @@ export class PaginationStrategy extends BaseStrategy {
       const startPage = pagination.startPage || 1;
       const maxPages = pagination.maxPages || 10;
       
+      this.debug(config, `Using pattern-based pagination: ${pagination.pagePattern}`);
+      this.debug(config, `Pages: ${startPage} to ${startPage + maxPages - 1}`);
+      
       for (let page = startPage; page <= startPage + maxPages - 1; page++) {
         const pageUrl = this.buildPageUrl(sourceUrl, pagination.pagePattern, pagination.pageParam, page);
+        this.debug(config, `Checking page ${page}: ${pageUrl}`);
+        
         if (pageUrl && pageUrl !== sourceUrl) {
           // Check if the page exists before adding it
           const exists = await this.checkPageExists(pageUrl);
           if (exists) {
+            this.debug(config, `Page ${page} exists, adding to URLs`);
             urls.push(pageUrl);
           } else {
             // Page doesn't exist, assume pagination ended
+            this.debug(config, `Page ${page} returned 404, stopping pagination`);
             console.log(`Pagination ended at page ${page - 1} (404 on ${pageUrl})`);
             break;
           }
@@ -80,6 +91,9 @@ export class PaginationStrategy extends BaseStrategy {
       const maxPages = pagination.maxPages || 50;
       const visitedUrls = new Set<string>([sourceUrl]);
       
+      this.debug(config, `Using next link selector: ${pagination.nextLinkSelector}`);
+      this.debug(config, `Max pages for next link following: ${maxPages}`);
+      
       while (urls.length < maxPages) {
         try {
           const links = await this.linkDiscoverer.discover(currentUrl, pagination.nextLinkSelector);
@@ -116,6 +130,7 @@ export class PaginationStrategy extends BaseStrategy {
     }
     
     // Default: just return the source URL
+    this.debug(config, `Pagination complete. Found ${urls.length} total URLs`);
     return { urls: [sourceUrl] };
   }
   

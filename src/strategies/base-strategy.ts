@@ -12,4 +12,11 @@ export abstract class BaseStrategy {
       return url;
     }
   }
+  
+  protected debug(config: any, ...args: any[]) {
+    // Check if debug is enabled in the crawl config passed through
+    if (config.debug) {
+      console.log(`[DEBUG] [${this.type}]`, new Date().toISOString(), ...args);
+    }
+  }
 }
