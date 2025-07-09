@@ -1,5 +1,10 @@
 import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test';
 import { PaginationStrategy } from '../../../src/strategies/pagination-strategy';
+import axios from 'axios';
+
+// Store original axios methods
+const originalHead = axios.head;
+const originalCreate = axios.create;
 
 describe('PaginationStrategy', () => {
   let strategy: PaginationStrategy;
@@ -15,11 +20,25 @@ describe('PaginationStrategy', () => {
       LinkDiscoverer: mock(() => mockLinkDiscoverer),
     }));
     
+    // Mock axios.create to return a mock instance
+    const mockAxiosInstance = {
+      get: mock(() => Promise.resolve({ data: '<html><body></body></html>' })),
+      head: mock(() => Promise.resolve({ status: 200 })),
+    };
+    
+    axios.create = mock(() => mockAxiosInstance) as any;
+    
+    // Mock axios.head to always return success for existing tests
+    axios.head = mock(() => Promise.resolve({ status: 200 })) as any;
+    
     strategy = new PaginationStrategy();
   });
   
   afterEach(() => {
     mock.restore();
+    // Restore original axios methods
+    axios.head = originalHead;
+    axios.create = originalCreate;
   });
   
   it('should have type "pagination"', () => {
