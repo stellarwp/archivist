@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
 import { getAxiosConfig } from '../utils/axios-config';
+import { resolvePureApiKey } from '../utils/pure-api-key';
 
 export interface PureMdConfig {
   apiKey?: string;
@@ -16,7 +17,7 @@ export class PureMdClient {
   private axios: AxiosInstance;
 
   constructor(config: PureMdConfig = {}) {
-    this.apiKey = config.apiKey || process.env.PURE_API_KEY;
+    this.apiKey = resolvePureApiKey(config);
     
     this.axios = axios.create(getAxiosConfig({
       baseURL: config.baseUrl || 'https://pure.md',

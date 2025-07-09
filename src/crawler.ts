@@ -16,6 +16,7 @@ import {
 import { shouldIncludeUrl } from './utils/pattern-matcher';
 import { StrategyFactory } from './strategies/strategy-factory';
 import type { SourceStrategyType } from './types/source-strategy';
+import { resolvePureApiKey } from './utils/pure-api-key';
 
 export class WebCrawler {
   private config: ArchivistConfig;
@@ -35,7 +36,7 @@ export class WebCrawler {
       
       const crawler = new ArchiveCrawler(
         archive,
-        this.config.crawl,
+        this.config,
         this.pureClient
       );
       
@@ -47,6 +48,7 @@ export class WebCrawler {
 
 class ArchiveCrawler {
   private archive: Archive;
+  private config: ArchivistConfig;
   private crawlConfig: ArchivistConfig['crawl'];
   private queue: Set<string> = new Set();
   private visited: Set<string> = new Set();
@@ -63,15 +65,16 @@ class ArchiveCrawler {
 
   constructor(
     archive: Archive,
-    crawlConfig: ArchivistConfig['crawl'],
+    config: ArchivistConfig,
     pureClient: PureMdClient
   ) {
     this.archive = archive;
-    this.crawlConfig = crawlConfig;
+    this.config = config;
+    this.crawlConfig = config.crawl;
     this.pureClient = pureClient;
     this.linkDiscoverer = new LinkDiscoverer({
-      userAgent: crawlConfig.userAgent,
-      timeout: crawlConfig.timeout,
+      userAgent: config.crawl.userAgent,
+      timeout: config.crawl.timeout,
     });
   }
 
@@ -193,7 +196,7 @@ class ArchiveCrawler {
 
     try {
       // Try to get content with Pure.md
-      if (this.pureClient && process.env.PURE_API_KEY) {
+      if (this.pureClient && resolvePureApiKey(this.config)) {
         try {
           const markdownContent = await this.pureClient.fetchContent(url);
           pageContent = parseMarkdownContent(markdownContent, url);
