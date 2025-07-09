@@ -35,7 +35,15 @@ export class PaginationStrategy extends BaseStrategy {
       for (let page = startPage; page <= startPage + maxPages - 1; page++) {
         const pageUrl = this.buildPageUrl(sourceUrl, pagination.pagePattern, pagination.pageParam, page);
         if (pageUrl && pageUrl !== sourceUrl) {
-          urls.push(pageUrl);
+          // Check if the page exists before adding it
+          const exists = await this.checkPageExists(pageUrl);
+          if (exists) {
+            urls.push(pageUrl);
+          } else {
+            // Page doesn't exist, assume pagination ended
+            console.log(`Pagination ended at page ${page - 1} (404 on ${pageUrl})`);
+            break;
+          }
         }
       }
       
@@ -51,7 +59,15 @@ export class PaginationStrategy extends BaseStrategy {
       for (let page = startPage; page <= startPage + maxPages - 1; page++) {
         const pageUrl = this.buildPageUrl(sourceUrl, '', pageParam, page);
         if (pageUrl && pageUrl !== sourceUrl) {
-          urls.push(pageUrl);
+          // Check if the page exists before adding it
+          const exists = await this.checkPageExists(pageUrl);
+          if (exists) {
+            urls.push(pageUrl);
+          } else {
+            // Page doesn't exist, assume pagination ended
+            console.log(`Pagination ended at page ${page - 1} (404 on ${pageUrl})`);
+            break;
+          }
         }
       }
       
@@ -119,5 +135,48 @@ export class PaginationStrategy extends BaseStrategy {
       const separator = baseUrl.includes('?') ? '&' : '?';
       return `${baseUrl}${separator}${pageParam}=${pageNumber}`;
     }
+  }
+  
+  private normalizeUrl(baseUrl: string, relativeUrl: string): string {
+    try {
+      return new URL(relativeUrl, baseUrl).href;
+    } catch {
+      return relativeUrl;
+    }
+  }
+  
+  private async checkPageExists(url: string, retries: number = 1): Promise<boolean> {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await axios.head(url, {
+          ...getAxiosConfig(),
+          timeout: 5000, // Shorter timeout for HEAD requests
+          validateStatus: (status) => status < 500, // Don't throw on 4xx errors
+        });
+        
+        if (response.status === 404) {
+          if (attempt < retries) {
+            // Wait a bit before retry
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          return false;
+        }
+        
+        // Any 2xx or 3xx status means the page exists
+        return response.status >= 200 && response.status < 400;
+      } catch (error) {
+        // Network errors or timeouts
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+        // After retries, assume page doesn't exist
+        console.error(`Error checking page existence for ${url}:`, error);
+        return false;
+      }
+    }
+    
+    return false;
   }
 }
