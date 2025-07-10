@@ -1,0 +1,25 @@
+{
+  "archives": [
+    {
+      "name": "Example Blog",
+      "sources": {
+        "url": "https://example.com/blog",
+        "strategy": "pagination",
+        "pagination": {
+          "pagePattern": "https://example.com/blog/page/{page}",
+          "startPage": 1,
+          "maxPages": 3
+        }
+      },
+      "output": {
+        "directory": "./test-archive/blog",
+        "format": "markdown"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 2,
+    "delay": 1000,
+    "debug": true
+  }
+}

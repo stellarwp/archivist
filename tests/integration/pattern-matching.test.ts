@@ -1,11 +1,14 @@
+import "reflect-metadata";
 import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
 import { extractLinksFromPage } from '../../src/utils/link-extractor';
 import axios from 'axios';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { initializeContainer, resetContainer } from '../../src/di/container';
 
-// Store original axios.get
+// Store original axios methods
 const originalAxiosGet = axios.get;
+const originalAxiosCreate = axios.create;
 
 // Load mock HTML fixture
 const fixturesPath = join(__dirname, '../fixtures');
@@ -13,13 +16,32 @@ const apiDocsHtml = readFileSync(join(fixturesPath, 'api-documentation.html'), '
 
 describe('Pattern Matching Integration', () => {
   beforeEach(() => {
-    // Mock axios.get
+    // Mock axios globally including instances created by axios.create
+    const mockAxiosInstance = {
+      get: mock(() => Promise.resolve({ data: apiDocsHtml })),
+      post: mock(),
+      head: mock(),
+      defaults: {},
+      interceptors: {
+        request: { use: mock() },
+        response: { use: mock() }
+      }
+    };
+    
+    axios.create = mock(() => mockAxiosInstance) as any;
     axios.get = mock(() => Promise.resolve({ data: apiDocsHtml })) as any;
+    
+    // Initialize DI container after mocking
+    initializeContainer();
   });
 
   afterEach(() => {
-    // Restore original axios.get
+    // Restore original axios methods
     axios.get = originalAxiosGet;
+    axios.create = originalAxiosCreate;
+    
+    // Reset DI container
+    resetContainer();
   });
 
   describe('minimatch patterns', () => {

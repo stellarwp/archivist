@@ -34,7 +34,14 @@ describe('content-formatter', () => {
     });
 
     it('should handle empty links array', () => {
-      const contentNoLinks = { ...mockPageContent, metadata: { ...mockPageContent.metadata, links: [] } };
+      const contentNoLinks: PageContent = { 
+        ...mockPageContent, 
+        metadata: { 
+          crawledAt: mockPageContent.metadata!.crawledAt,
+          contentLength: mockPageContent.metadata!.contentLength,
+          links: [] 
+        } 
+      };
       const result = formatAsMarkdown(contentNoLinks);
       
       expect(result).toContain('**Links Found:** 0');

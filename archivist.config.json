@@ -1,19 +1,34 @@
 {
   "archives": [
     {
-      "name": "Example Site",
+      "name": "Example Documentation",
       "sources": [
         {
-          "url": "https://example.com",
-          "name": "Example Site",
-          "depth": 1
+          "url": "https://example.com/docs",
+          "name": "Main Docs",
+          "depth": 2
         }
       ],
       "output": {
-        "directory": "./archive",
+        "directory": "./archive/example-docs",
         "format": "markdown",
         "fileNaming": "url-based"
       }
+    },
+    {
+      "name": "Blog Posts",
+      "sources": "https://example.com/blog",
+      "output": {
+        "directory": "./archive/blog",
+        "format": "json",
+        "fileNaming": "title-based"
+      }
     }
-  ]
+  ],
+  "crawl": {
+    "maxConcurrency": 3,
+    "delay": 1000,
+    "userAgent": "Archivist/0.1.0-beta.6",
+    "timeout": 30000
+  }
 }

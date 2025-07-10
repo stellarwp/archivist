@@ -17,6 +17,7 @@ import { shouldIncludeUrl } from './utils/pattern-matcher';
 import { StrategyFactory } from './strategies/strategy-factory';
 import type { SourceStrategyType } from './types/source-strategy';
 import { resolvePureApiKey } from './utils/pure-api-key';
+import { appContainer } from './di/container';
 
 export class WebCrawler {
   private config: ArchivistConfig;
@@ -24,9 +25,7 @@ export class WebCrawler {
 
   constructor(config: ArchivistConfig) {
     this.config = config;
-    this.pureClient = new PureMdClient({
-      apiKey: config.pure?.apiKey,
-    });
+    this.pureClient = appContainer.resolve(PureMdClient);
   }
 
   async crawlAll(): Promise<void> {
@@ -102,10 +101,7 @@ class ArchiveCrawler {
     this.config = config;
     this.crawlConfig = config.crawl;
     this.pureClient = pureClient;
-    this.linkDiscoverer = new LinkDiscoverer({
-      userAgent: config.crawl.userAgent,
-      timeout: config.crawl.timeout,
-    });
+    this.linkDiscoverer = appContainer.resolve(LinkDiscoverer);
   }
 
   async crawl(): Promise<PageContent[]> {
@@ -273,7 +269,7 @@ class ArchiveCrawler {
       if (depth > 0 && source) {
         const sourceUrl = typeof source === 'string' ? source : source.url;
         const currentDepth = this.getDepth(url, sourceUrl);
-        if (currentDepth < depth) {
+        if (currentDepth < depth && pageContent.metadata) {
           // Apply include/exclude patterns to discovered links
           let filteredLinks = pageContent.metadata.links;
           
@@ -540,8 +536,8 @@ class ArchiveCrawler {
       results: this.results.map(r => ({
         url: r.url,
         title: r.title,
-        contentLength: r.metadata.contentLength,
-        linksCount: r.metadata.links.length,
+        contentLength: r.metadata?.contentLength || 0,
+        linksCount: r.metadata?.links.length || 0,
       })),
     };
     

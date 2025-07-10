@@ -1,18 +1,29 @@
 import { BaseStrategy } from './base-strategy';
 import type { StrategyResult } from '../types/source-strategy';
 import { LinkDiscoverer } from '../services/link-discoverer';
-import { getAxiosConfig } from '../utils/axios-config';
+import { appContainer } from '../di/container';
 import { extractLinksFromPage } from '../utils/link-extractor';
 import axios from 'axios';
+import { getAxiosConfig } from '../utils/axios-config';
 
 export class PaginationStrategy extends BaseStrategy {
   type = 'pagination';
-  private linkDiscoverer: LinkDiscoverer;
+  private linkDiscoverer: LinkDiscoverer | null = null;
   
   constructor() {
     super();
-    const axiosInstance = axios.create(getAxiosConfig());
-    this.linkDiscoverer = new LinkDiscoverer(axiosInstance);
+  }
+  
+  private getLinkDiscoverer(): LinkDiscoverer {
+    if (!this.linkDiscoverer) {
+      try {
+        this.linkDiscoverer = appContainer.resolve(LinkDiscoverer);
+      } catch (error) {
+        // Fallback: create a minimal implementation if DI is not available
+        throw new Error('LinkDiscoverer dependency not available. Ensure DI container is initialized.');
+      }
+    }
+    return this.linkDiscoverer;
   }
   
   async execute(sourceUrl: string, config: any): Promise<StrategyResult> {
@@ -101,7 +112,7 @@ export class PaginationStrategy extends BaseStrategy {
       
       while (pageUrls.length < maxPages) {
         try {
-          const links = await this.linkDiscoverer.discover(currentUrl, pagination.nextLinkSelector);
+          const links = await this.getLinkDiscoverer().discover(currentUrl, pagination.nextLinkSelector);
           
           if (links.length === 0) {
             break;

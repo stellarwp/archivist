@@ -1,6 +1,8 @@
+import { singleton } from 'tsyringe';
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
-import { getAxiosConfig } from '../utils/axios-config';
-import { resolvePureApiKey } from '../utils/pure-api-key';
+import { ConfigService } from './config.service';
+import { HttpService } from './http.service';
+import { LoggerService } from './logger.service';
 
 export interface PureMdConfig {
   apiKey?: string;
@@ -12,20 +14,42 @@ export interface PureMdExtractOptions {
   model?: string;
 }
 
+@singleton()
 export class PureMdClient {
   private apiKey?: string;
-  private axios: AxiosInstance;
+  private axios!: AxiosInstance;
+  private baseUrl: string = 'https://pure.md';
 
-  constructor(config: PureMdConfig = {}) {
-    this.apiKey = resolvePureApiKey(config);
+  constructor(
+    private configService: ConfigService,
+    private httpService: HttpService,
+    private logger: LoggerService
+  ) {
+    this.initializeClient();
+  }
+  
+  private initializeClient(): void {
+    try {
+      this.apiKey = this.configService.getPureApiKey();
+    } catch {
+      // Config not yet initialized
+      this.logger.debug('PureMdClient: Config not yet initialized');
+    }
     
-    this.axios = axios.create(getAxiosConfig({
-      baseURL: config.baseUrl || 'https://pure.md',
-      headers: this.apiKey ? {
-        'x-puremd-api-token': this.apiKey
-      } : {},
+    const headers = this.apiKey ? {
+      'x-puremd-api-token': this.apiKey
+    } : {};
+    
+    this.axios = this.httpService.createInstance({
+      baseURL: this.baseUrl,
+      headers,
       timeout: 30000,
-    }));
+    });
+  }
+  
+  // Re-initialize when config changes
+  updateConfig(): void {
+    this.initializeClient();
   }
 
   async fetchContent(url: string): Promise<string> {

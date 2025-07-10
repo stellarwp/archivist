@@ -1,8 +1,10 @@
-import axios from 'axios';
+import { singleton } from 'tsyringe';
+import axios, { type AxiosInstance } from 'axios';
 import * as cheerio from 'cheerio';
-import { getAxiosConfig } from '../utils/axios-config';
 import { shouldIncludeUrl } from '../utils/pattern-matcher';
-import { DEFAULT_USER_AGENT } from '../version';
+import { ConfigService } from './config.service';
+import { HttpService } from './http.service';
+import { LoggerService } from './logger.service';
 
 export interface LinkDiscoveryOptions {
   userAgent: string;
@@ -20,43 +22,23 @@ export interface LinkFilterOptions {
   excludePatterns?: string[];
 }
 
+@singleton()
 export class LinkDiscoverer {
-  private axiosInstance: any;
-  private options: LinkDiscoveryOptions;
+  private axiosInstance: AxiosInstance;
   
-  constructor(options: LinkDiscoveryOptions | any) {
-    // Handle both old and new constructor patterns
-    if (options && typeof options.get === 'function') {
-      // It's an axios instance
-      this.axiosInstance = options;
-      this.options = {
-        userAgent: DEFAULT_USER_AGENT,
-        timeout: 30000,
-      };
-    } else if (options && typeof options === 'object') {
-      // It's LinkDiscoveryOptions
-      this.options = options;
-      this.axiosInstance = axios;
-    } else {
-      // Fallback for edge cases
-      this.options = {
-        userAgent: DEFAULT_USER_AGENT,
-        timeout: 30000,
-      };
-      this.axiosInstance = axios;
-    }
+  constructor(
+    private configService: ConfigService,
+    private httpService: HttpService,
+    private logger: LoggerService
+  ) {
+    this.axiosInstance = this.httpService.instance;
   }
 
   async discover(url: string, selector: string = 'a[href]'): Promise<string[]> {
     try {
-      const config = this.axiosInstance.get && this.axiosInstance !== axios ? {} : getAxiosConfig({
-        headers: {
-          'User-Agent': this.options.userAgent,
-        },
-        timeout: this.options.timeout,
-      });
+      this.logger.debug(`Discovering links from ${url} with selector: ${selector}`);
       
-      const response = await (this.axiosInstance || axios).get(url, config);
+      const response = await this.axiosInstance.get(url);
       const html = response.data;
       const $ = cheerio.load(html);
       
@@ -75,6 +57,7 @@ export class LinkDiscoverer {
         }
       });
       
+      this.logger.debug(`Discovered ${links.length} links from ${url}`);
       return links;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -86,26 +69,16 @@ export class LinkDiscoverer {
 
   async discoverLinks(url: string, filterOptions?: LinkFilterOptions): Promise<DiscoveredLinks> {
     try {
-      // Fetch the HTML content
-      const config = this.axiosInstance === axios ? getAxiosConfig({
-        headers: {
-          'User-Agent': this.options.userAgent,
-        },
-        timeout: this.options.timeout,
-      }) : {
-        headers: {
-          'User-Agent': this.options.userAgent,
-        },
-        timeout: this.options.timeout,
-      };
+      this.logger.debug(`Discovering links from ${url}`, { filterOptions });
       
-      const response = await this.axiosInstance.get(url, config);
-
+      const response = await this.axiosInstance.get(url);
       const html = response.data;
       const $ = cheerio.load(html);
 
       // Extract all links
       const links = this.extractLinks($, url, filterOptions);
+
+      this.logger.debug(`Extracted ${links.length} links from ${url}`);
 
       return {
         url,

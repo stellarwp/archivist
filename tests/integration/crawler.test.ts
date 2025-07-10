@@ -1,9 +1,11 @@
+import "reflect-metadata";
 import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test';
 import { WebCrawler } from '../../src/crawler';
 import type { ArchivistConfig } from '../../archivist.config';
 import { rm, exists } from 'fs/promises';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { initializeContainer, resetContainer } from '../../src/di/container';
 
 describe('WebCrawler Integration', () => {
   const testOutputDir = './test-archive';
@@ -36,6 +38,9 @@ describe('WebCrawler Integration', () => {
   };
 
   beforeEach(async () => {
+    // Initialize DI container
+    initializeContainer();
+    
     // Clean up test directory if it exists
     if (await exists(testOutputDir)) {
       await rm(testOutputDir, { recursive: true });
@@ -47,6 +52,9 @@ describe('WebCrawler Integration', () => {
     if (await exists(testOutputDir)) {
       await rm(testOutputDir, { recursive: true });
     }
+    
+    // Reset DI container
+    resetContainer();
   });
 
   it('should create output directory', async () => {
