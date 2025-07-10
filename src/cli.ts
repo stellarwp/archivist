@@ -206,6 +206,9 @@ program
   .command('init')
   .description('Initialize a new archivist config file')
   .action(async () => {
+    // Initialize DI container
+    initializeContainer();
+    
     const exampleConfig = {
       archives: [
         {

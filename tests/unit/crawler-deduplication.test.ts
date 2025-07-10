@@ -3,6 +3,7 @@ import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
 import type { ArchivistConfig } from '../../archivist.config';
 import { WebCrawler } from '../../src/crawler';
 import axios from 'axios';
+import { initializeContainer, resetContainer } from '../../src/di/container';
 
 // Store original axios methods
 const originalAxiosGet = axios.get;
@@ -10,6 +11,8 @@ const originalAxiosCreate = axios.create;
 
 describe('Crawler Link Deduplication', () => {
   beforeEach(() => {
+    // Initialize DI container
+    initializeContainer();
     // Mock axios for testing
     const mockAxiosInstance = {
       get: mock(() => Promise.resolve({ data: '# Mock Content' })),
@@ -57,6 +60,9 @@ describe('Crawler Link Deduplication', () => {
     // Restore original methods
     axios.get = originalAxiosGet;
     axios.create = originalAxiosCreate;
+    
+    // Reset DI container
+    resetContainer();
   });
 
   it('should deduplicate links from multiple object sources', async () => {
