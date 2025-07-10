@@ -145,32 +145,53 @@ bun add git+https://github.com/YOUR_USERNAME/archivist.git#your-branch
 ```
 archivist/
 ├── src/
-│   ├── cli.ts              # CLI entry point
-│   ├── crawler.ts          # Main crawler logic with multi-archive support
-│   ├── services/
-│   │   ├── link-discoverer.ts  # Cheerio-based link discovery
-│   │   └── pure-md.ts          # Pure.md API client
-│   └── utils/
-│       ├── content-formatter.ts  # Output formatting
-│       ├── file-naming.ts       # File naming strategies
-│       ├── link-extractor.ts    # Link extraction for index pages
-│       └── markdown-parser.ts   # Markdown parsing
+│   ├── cli.ts                     # CLI entry point with commands
+│   ├── index.ts                   # Main module export
+│   ├── di/                        # Dependency injection
+│   │   └── container.ts           # tsyringe DI container setup
+│   ├── services/                  # Core service layer
+│   │   ├── archive-crawler.service.ts  # Crawls individual archives
+│   │   ├── web-crawler.service.ts      # Orchestrates crawling process
+│   │   ├── config.service.ts          # Configuration management
+│   │   ├── state.service.ts           # State and progress tracking
+│   │   ├── logger.service.ts          # Logging and output formatting
+│   │   ├── http.service.ts            # HTTP client configuration
+│   │   ├── link-discoverer.ts         # Cheerio-based link discovery
+│   │   └── pure-md.ts                 # Pure.md API client
+│   ├── strategies/                # Source crawling strategies
+│   │   ├── base-strategy.ts           # Abstract base strategy
+│   │   ├── explorer-strategy.ts       # Single page link extraction
+│   │   ├── pagination-strategy.ts     # Paginated content handling
+│   │   └── strategy-factory.ts        # Strategy creation factory
+│   ├── utils/                     # Utility functions
+│   │   ├── content-formatter.ts       # Output formatting (MD/JSON/HTML)
+│   │   ├── file-naming.ts            # File naming strategies
+│   │   ├── link-extractor.ts         # Link extraction helper
+│   │   ├── pattern-matcher.ts        # URL pattern matching
+│   │   ├── markdown-parser.ts        # Markdown parsing utilities
+│   │   ├── pure-api-key.ts           # API key resolution
+│   │   └── axios-config.ts           # Axios configuration
+│   ├── types/                     # TypeScript type definitions
+│   │   └── source-strategy.ts         # Strategy type definitions
+│   └── version.ts                 # Version management
 ├── tests/
-│   ├── unit/               # Unit tests
-│   │   ├── services/       # Service tests
-│   │   └── utils/          # Utility tests
-│   └── integration/        # Integration tests
-├── examples/               # Example configurations
+│   ├── unit/                      # Unit tests
+│   │   ├── services/             # Service tests
+│   │   ├── utils/                # Utility tests
+│   │   └── strategies/           # Strategy tests
+│   └── integration/              # Integration tests
+├── examples/                      # Example configurations
 │   ├── simple-single-archive.config.json
 │   ├── multi-archive.config.json
 │   ├── documentation-crawler.config.json
+│   ├── pagination.config.json
 │   └── link-collection.config.json
 ├── .github/
-│   └── workflows/          # GitHub Actions
-├── archivist.config.ts     # Configuration schema
-├── package.json            # Package metadata
-├── tsconfig.json           # TypeScript config
-└── bun.lockb              # Lock file
+│   └── workflows/                # GitHub Actions
+├── archivist.config.ts           # Configuration schema
+├── package.json                  # Package metadata
+├── tsconfig.json                 # TypeScript config
+└── bun.lockb                    # Lock file
 ```
 
 ## Development Workflow
@@ -352,6 +373,81 @@ Before submitting a PR:
 - [ ] New features have tests
 - [ ] Documentation is updated
 - [ ] Commit messages follow convention
+
+## Service Architecture
+
+### Dependency Injection
+
+Archivist uses tsyringe for dependency injection, providing better testability and separation of concerns:
+
+```typescript
+import { singleton } from 'tsyringe';
+
+@singleton()
+export class MyService {
+  constructor(
+    private configService: ConfigService,
+    private logger: LoggerService
+  ) {}
+}
+```
+
+### Core Services
+
+#### WebCrawlerService
+Main orchestrator that coordinates the crawling process across multiple archives.
+
+```typescript
+const webCrawler = appContainer.resolve(WebCrawlerService);
+await webCrawler.collectAllUrls();
+await webCrawler.crawlAll({ clean: true });
+```
+
+#### ArchiveCrawlerService
+Handles crawling individual archives, including URL discovery and content extraction.
+
+```typescript
+const archiveCrawler = appContainer.resolve(ArchiveCrawlerService);
+const urls = await archiveCrawler.collectUrlsFromSource(sourceUrl, sourceConfig);
+await archiveCrawler.crawlUrls(archive, archiveState);
+```
+
+#### ConfigService
+Manages configuration with environment variable fallbacks.
+
+```typescript
+const configService = appContainer.resolve(ConfigService);
+configService.initialize(config, configPath);
+const archives = configService.getArchives();
+```
+
+#### StateService
+Tracks crawling progress and manages state persistence.
+
+```typescript
+const stateService = appContainer.resolve(StateService);
+stateService.initializeArchive(archiveName);
+stateService.addToQueue(archiveName, url);
+```
+
+### Strategy Pattern
+
+Source strategies allow flexible URL discovery:
+
+```typescript
+// Creating custom strategy
+export class CustomStrategy extends BaseStrategy {
+  type = 'custom';
+  
+  async execute(sourceUrl: string, config: any): Promise<StrategyResult> {
+    // Custom URL discovery logic
+    return { urls: discoveredUrls };
+  }
+}
+
+// Registering strategy
+StrategyFactory.registerStrategy('custom', () => new CustomStrategy());
+```
 
 ## Advanced Topics
 

@@ -1,16 +1,37 @@
+/**
+ * Represents the content of a crawled page
+ * @interface PageContent
+ */
 export interface PageContent {
+  /** The URL of the page */
   url: string;
+  /** Title extracted from the page */
   title: string;
+  /** Main content of the page */
   content: string;
+  /** Optional content length in characters */
   contentLength?: number;
+  /** Optional array of links found on the page */
   links?: string[];
+  /** Optional metadata about the crawl */
   metadata?: {
+    /** When the page was crawled */
     crawledAt: string;
+    /** Length of the content */
     contentLength: number;
+    /** Links found on the page */
     links: string[];
   };
 }
 
+/**
+ * Formats page content into the specified output format.
+ * Normalizes the page data and delegates to specific formatters.
+ * 
+ * @param {PageContent} page - The page content to format
+ * @param {'markdown' | 'json' | 'html'} [format='markdown'] - Output format
+ * @returns {string} Formatted content as a string
+ */
 export function formatContent(page: PageContent, format: 'markdown' | 'json' | 'html' = 'markdown'): string {
   // Normalize the page data
   const normalizedPage: PageContent = {
@@ -33,6 +54,13 @@ export function formatContent(page: PageContent, format: 'markdown' | 'json' | '
   }
 }
 
+/**
+ * Formats page content as Markdown with metadata header.
+ * Includes URL, crawl timestamp, content length, and links.
+ * 
+ * @param {PageContent} page - The page content to format
+ * @returns {string} Markdown formatted content
+ */
 export function formatAsMarkdown(page: PageContent): string {
   const metadata = page.metadata || {
     crawledAt: new Date().toISOString(),
@@ -59,10 +87,23 @@ ${metadata.links.map(link => `- ${link}`).join('\n')}
 `;
 }
 
+/**
+ * Formats page content as pretty-printed JSON.
+ * 
+ * @param {PageContent} page - The page content to format
+ * @returns {string} JSON formatted content
+ */
 export function formatAsJson(page: PageContent): string {
   return JSON.stringify(page, null, 2);
 }
 
+/**
+ * Formats page content as a self-contained HTML document.
+ * Includes metadata in both meta tags and visible content.
+ * 
+ * @param {PageContent} page - The page content to format
+ * @returns {string} HTML formatted content
+ */
 export function formatAsHtml(page: PageContent): string {
   const metadata = page.metadata || {
     crawledAt: new Date().toISOString(),

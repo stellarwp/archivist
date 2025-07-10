@@ -1,5 +1,13 @@
 import type { PageContent } from './content-formatter';
 
+/**
+ * Parses markdown content to extract structured information.
+ * Extracts title, links, and metadata from markdown text.
+ * 
+ * @param {string} markdown - Raw markdown content
+ * @param {string} url - Source URL of the content
+ * @returns {PageContent} Structured page content object
+ */
 export function parseMarkdownContent(markdown: string, url: string): PageContent {
   // Extract title from first H1 or from URL
   const titleMatch = markdown.match(/^#\s+(.+)$/m);
@@ -46,6 +54,13 @@ export function parseMarkdownContent(markdown: string, url: string): PageContent
   };
 }
 
+/**
+ * Extracts a human-readable title from a URL.
+ * Converts URL path segments into title case.
+ * 
+ * @param {string} url - URL to extract title from
+ * @returns {string} Extracted title or 'Untitled' as fallback
+ */
 function extractTitleFromUrl(url: string): string {
   try {
     const urlObj = new URL(url);

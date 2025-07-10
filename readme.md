@@ -867,6 +867,77 @@ Use when pages have "Next" or "Older Posts" links:
    - Use browser DevTools to inspect pagination elements
    - Check for JavaScript-rendered pagination links
 
+## Programmatic API
+
+Archivist can be used programmatically in your Node.js/Bun applications:
+
+```javascript
+import { initializeContainer, appContainer } from '@stellarwp/archivist';
+import { WebCrawlerService, ConfigService } from '@stellarwp/archivist';
+
+// Initialize the DI container
+initializeContainer();
+
+// Get services
+const configService = appContainer.resolve(ConfigService);
+const webCrawler = appContainer.resolve(WebCrawlerService);
+
+// Initialize configuration
+configService.initialize({
+  archives: [{
+    name: "My Archive",
+    sources: ["https://example.com"],
+    output: {
+      directory: "./output",
+      format: "markdown"
+    }
+  }],
+  crawl: {
+    maxConcurrency: 3,
+    delay: 1000
+  }
+});
+
+// Collect URLs first
+await webCrawler.collectAllUrls();
+
+// Display collected URLs
+webCrawler.displayCollectedUrls();
+
+// Start crawling
+await webCrawler.crawlAll({ clean: true });
+```
+
+### Service API Reference
+
+#### WebCrawlerService
+The main service for orchestrating web crawling operations.
+
+Methods:
+- `collectAllUrls(): Promise<void>` - Collects URLs from all configured archives
+- `displayCollectedUrls(): void` - Displays collected URLs to console
+- `crawlAll(options?: { clean?: boolean }): Promise<void>` - Crawls all collected URLs
+- `getCollectedLinksReport(): string` - Returns a summary report of collected links
+
+#### ConfigService
+Manages application configuration.
+
+Methods:
+- `initialize(config: ArchivistConfig, configPath?: string): void` - Initialize configuration
+- `getArchives(): ArchiveConfig[]` - Get all archive configurations
+- `getCrawlConfig(): CrawlConfig` - Get crawl-specific settings
+- `getPureApiKey(): string | undefined` - Get Pure.md API key
+- `updateConfig(updates: Partial<ArchivistConfig>): void` - Update configuration
+
+#### StateService
+Tracks crawling state and progress.
+
+Methods:
+- `initializeArchive(archiveName: string): void` - Initialize state for an archive
+- `addToQueue(archiveName: string, url: string): void` - Add URL to crawl queue
+- `markVisited(archiveName: string, url: string): void` - Mark URL as visited
+- `getTotalUrlCount(): number` - Get total URL count across all archives
+
 ## CLI Reference
 
 ### Pre-Crawl Confirmation
@@ -1088,6 +1159,12 @@ jobs:
           config-file: './archivist.config.json'
           pure-api-key: ${{ secrets.PURE_API_KEY }}
 ```
+
+## Documentation
+
+- **[Development Guide](DEVELOPMENT.md)** - Detailed development setup, architecture, and contributing guidelines
+- **[API Reference](docs/API.md)** - Comprehensive API documentation for programmatic usage
+- **[GitHub Action Documentation](docs/github-action.md)** - Using Archivist as a GitHub Action
 
 ## Development
 

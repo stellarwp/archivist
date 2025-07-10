@@ -3,22 +3,41 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import type { ArchiveConfig, SourceConfig } from '../../archivist.config';
 
+/**
+ * Result of crawling a single URL
+ * @interface CrawlResult
+ */
 export interface CrawlResult {
+  /** The URL that was crawled */
   url: string;
+  /** Extracted title from the page */
   title: string;
+  /** Extracted content in markdown format */
   content: string;
+  /** Length of the content in characters */
   contentLength: number;
+  /** Links found on the page */
   links: string[];
+  /** Optional metadata about the crawl */
   metadata?: any;
 }
 
+/**
+ * State for a single archive during crawling
+ * @interface ArchiveState
+ */
 export interface ArchiveState {
+  /** Name of the archive */
   archiveName: string;
+  /** URLs waiting to be crawled */
   queue: string[];
+  /** URLs that have been visited */
   visited: string[];
+  /** Results from crawled URLs */
   results: CrawlResult[];
+  /** Map of URLs to their source configuration */
   sourceMap: Map<string, SourceConfig>;
-  // For pagination tracking
+  /** Information about pagination discovery */
   paginationInfo: {
     sourceUrl: string;
     pagesDiscovered: number;
@@ -26,8 +45,14 @@ export interface ArchiveState {
   }[];
 }
 
+/**
+ * Global state for the entire crawl operation
+ * @interface GlobalCrawlState
+ */
 export interface GlobalCrawlState {
+  /** Map of archive names to their states */
   archives: Map<string, ArchiveState>;
+  /** URLs collected during the discovery phase */
   collectedUrls: {
     archiveName: string;
     sourceUrl: string;
@@ -35,31 +60,57 @@ export interface GlobalCrawlState {
     urls: string[];
     paginationPages?: number;
   }[];
+  /** When the crawl operation started */
   startTime: Date;
+  /** Path to the configuration file */
   configPath?: string;
 }
 
+/**
+ * Service for managing crawl state across the application.
+ * Handles state persistence, URL tracking, and result collection.
+ * 
+ * @class StateService
+ * @singleton
+ */
 @singleton()
 export class StateService {
+  /** The global crawl state */
   private state: GlobalCrawlState = {
     archives: new Map(),
     collectedUrls: [],
     startTime: new Date(),
   };
   
+  /** Directory for storing state files */
   private stateDir: string = '.archivist-state';
   
+  /**
+   * Creates an instance of StateService
+   */
   constructor() {
     this.ensureStateDirectory();
   }
   
+  /**
+   * Ensures the state directory exists for storing state files.
+   * 
+   * @private
+   * @returns {void}
+   */
   private ensureStateDirectory(): void {
     if (!existsSync(this.stateDir)) {
       mkdirSync(this.stateDir, { recursive: true });
     }
   }
   
-  // Initialize state for an archive
+  /**
+   * Initializes state for a new archive.
+   * Creates the archive state if it doesn't exist.
+   * 
+   * @param {string} archiveName - Name of the archive to initialize
+   * @returns {void}
+   */
   initializeArchive(archiveName: string): void {
     if (!this.state.archives.has(archiveName)) {
       this.state.archives.set(archiveName, {
@@ -73,12 +124,27 @@ export class StateService {
     }
   }
   
-  // Get archive state
+  /**
+   * Retrieves the state for a specific archive.
+   * 
+   * @param {string} archiveName - Name of the archive
+   * @returns {ArchiveState | undefined} Archive state or undefined if not found
+   */
   getArchiveState(archiveName: string): ArchiveState | undefined {
     return this.state.archives.get(archiveName);
   }
   
-  // Add collected URLs from source discovery
+  /**
+   * Adds URLs collected during the discovery phase.
+   * Tracks which archive and source they came from.
+   * 
+   * @param {string} archiveName - Name of the archive
+   * @param {string} sourceUrl - The source URL these were collected from
+   * @param {string} strategy - Strategy used for collection (explorer/pagination)
+   * @param {string[]} urls - Array of discovered URLs
+   * @param {number} [paginationPages] - Number of pagination pages discovered
+   * @returns {void}
+   */
   addCollectedUrls(
     archiveName: string, 
     sourceUrl: string, 
@@ -95,17 +161,29 @@ export class StateService {
     });
   }
   
-  // Get all collected URLs
+  /**
+   * Returns all URLs collected during discovery phase.
+   * 
+   * @returns {Array} Array of collected URL information
+   */
   getAllCollectedUrls(): typeof this.state.collectedUrls {
     return this.state.collectedUrls;
   }
   
-  // Get total URL count across all archives
+  /**
+   * Calculates total number of URLs across all archives.
+   * 
+   * @returns {number} Total URL count
+   */
   getTotalUrlCount(): number {
     return this.state.collectedUrls.reduce((sum, item) => sum + item.urls.length, 0);
   }
   
-  // Get pagination statistics
+  /**
+   * Calculates statistics about pagination discovery.
+   * 
+   * @returns {{ totalPages: number; totalLinks: number }} Pagination statistics
+   */
   getPaginationStats(): { totalPages: number; totalLinks: number } {
     let totalPages = 0;
     let totalLinks = 0;
@@ -120,7 +198,13 @@ export class StateService {
     return { totalPages, totalLinks };
   }
   
-  // Save state to file (for multi-threading support)
+  /**
+   * Persists current state to a JSON file.
+   * Supports multi-threading by using thread IDs.
+   * 
+   * @param {number | string} [threadId='main'] - Thread identifier
+   * @returns {void}
+   */
   saveStateToFile(threadId: number | string = 'main'): void {
     const statePath = join(this.stateDir, `state-${threadId}.json`);
     const stateData = {
@@ -212,7 +296,14 @@ export class StateService {
     writeFileSync(outputPath, JSON.stringify(linksData, null, 2));
   }
   
-  // Add URL to queue
+  /**
+   * Adds a URL to the crawl queue for an archive.
+   * Prevents duplicates and already visited URLs.
+   * 
+   * @param {string} archiveName - Name of the archive
+   * @param {string} url - URL to add to queue
+   * @returns {void}
+   */
   addToQueue(archiveName: string, url: string): void {
     const state = this.getArchiveState(archiveName);
     if (state && !state.queue.includes(url) && !state.visited.includes(url)) {
@@ -220,7 +311,13 @@ export class StateService {
     }
   }
   
-  // Mark URL as visited
+  /**
+   * Marks a URL as visited and removes it from the queue.
+   * 
+   * @param {string} archiveName - Name of the archive
+   * @param {string} url - URL to mark as visited
+   * @returns {void}
+   */
   markVisited(archiveName: string, url: string): void {
     const state = this.getArchiveState(archiveName);
     if (state) {
@@ -234,7 +331,13 @@ export class StateService {
     }
   }
   
-  // Add crawl result
+  /**
+   * Adds a crawl result to the archive's results.
+   * 
+   * @param {string} archiveName - Name of the archive
+   * @param {CrawlResult} result - Result to add
+   * @returns {void}
+   */
   addResult(archiveName: string, result: CrawlResult): void {
     const state = this.getArchiveState(archiveName);
     if (state) {
@@ -242,7 +345,11 @@ export class StateService {
     }
   }
   
-  // Clear state
+  /**
+   * Clears all state data and resets to initial state.
+   * 
+   * @returns {void}
+   */
   clearState(): void {
     this.state = {
       archives: new Map(),

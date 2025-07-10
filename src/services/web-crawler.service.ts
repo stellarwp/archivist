@@ -6,8 +6,22 @@ import { ArchiveCrawlerService } from './archive-crawler.service';
 import type { ArchiveConfig } from '../../archivist.config';
 import { readFileSync } from 'fs';
 
+/**
+ * Main service orchestrating the web crawling process.
+ * Coordinates URL collection, crawling, and result saving across multiple archives.
+ * 
+ * @class WebCrawlerService
+ * @singleton
+ */
 @singleton()
 export class WebCrawlerService {
+  /**
+   * Creates an instance of WebCrawlerService
+   * @param {ConfigService} configService - Service for accessing configuration
+   * @param {StateService} stateService - Service for managing crawl state
+   * @param {LoggerService} logger - Service for logging
+   * @param {ArchiveCrawlerService} archiveCrawler - Service for crawling individual archives
+   */
   constructor(
     private configService: ConfigService,
     private stateService: StateService,
@@ -15,6 +29,12 @@ export class WebCrawlerService {
     private archiveCrawler: ArchiveCrawlerService
   ) {}
 
+  /**
+   * Collects URLs from all configured archives without crawling them.
+   * Saves collected URLs to a JSON file for review.
+   * 
+   * @returns {Promise<void>}
+   */
   async collectAllUrls(): Promise<void> {
     const archives = this.configService.getArchives();
     
@@ -28,6 +48,14 @@ export class WebCrawlerService {
     this.stateService.saveCollectedLinksFile('collected-links.json');
   }
   
+  /**
+   * Collects URLs from a single archive based on its source configuration.
+   * Handles both simple URL sources and complex source configurations.
+   * 
+   * @private
+   * @param {ArchiveConfig} archive - Archive configuration to collect URLs from
+   * @returns {Promise<void>}
+   */
   private async collectArchiveUrls(archive: ArchiveConfig): Promise<void> {
     this.logger.section(`Collecting URLs for archive: ${archive.name}`);
     
@@ -73,6 +101,12 @@ export class WebCrawlerService {
     }
   }
   
+  /**
+   * Displays all collected URLs to the console in a formatted list.
+   * Shows total count and pagination statistics.
+   * 
+   * @returns {void}
+   */
   displayCollectedUrls(): void {
     const collectedUrls = this.stateService.getAllCollectedUrls();
     const totalUrls = this.stateService.getTotalUrlCount();
@@ -98,12 +132,24 @@ export class WebCrawlerService {
     }
   }
   
+  /**
+   * @deprecated Kept for backward compatibility. Confirmation is now handled in CLI layer.
+   * @returns {Promise<boolean>} Always returns true
+   */
   async promptForConfirmation(): Promise<boolean> {
     // This method is kept for backward compatibility
     // but the actual prompting is now handled in the CLI layer
     return true;
   }
   
+  /**
+   * Crawls all collected URLs and saves results for each archive.
+   * Processes archives sequentially to avoid overwhelming target servers.
+   * 
+   * @param {Object} options - Crawl options
+   * @param {boolean} [options.clean] - Whether to clean output directories before saving
+   * @returns {Promise<void>}
+   */
   async crawlAll(options: { clean?: boolean } = {}): Promise<void> {
     const archives = this.configService.getArchives();
     const collectedUrls = this.stateService.getAllCollectedUrls();
@@ -145,6 +191,12 @@ export class WebCrawlerService {
     this.logger.info('\n✨ All archives completed!');
   }
   
+  /**
+   * Generates a summary report of collected links from the saved JSON file.
+   * Includes breakdown by archive, strategies used, and pagination statistics.
+   * 
+   * @returns {string} Formatted report or error message if file not found
+   */
   getCollectedLinksReport(): string {
     try {
       const linksData = JSON.parse(readFileSync('collected-links.json', 'utf-8'));
