@@ -4,6 +4,7 @@ import axios from 'axios';
 
 // Store original axios methods
 const originalHead = axios.head;
+const originalGet = axios.get;
 const originalCreate = axios.create;
 
 describe('PaginationStrategy', () => {
@@ -20,32 +21,32 @@ describe('PaginationStrategy', () => {
       LinkDiscoverer: mock(() => mockLinkDiscoverer),
     }));
     
-    // Mock extractLinksFromPage function
-    mock.module('../../../src/utils/link-extractor', () => ({
-      extractLinksFromPage: mock(async ({ url }: { url: string }) => {
-        // Return a unique link for each page based on URL
+    // Don't mock extractLinksFromPage globally - it affects other tests
+    // Instead, we'll mock the axios responses to return HTML with the links we expect
+    
+    // Mock axios.create to return a mock instance
+    const mockAxiosInstance = {
+      get: mock((url: string) => {
+        // Return HTML with appropriate links based on URL
         const pageNum = url.match(/page[/=](\d+)/)?.[1] || 
                        url.match(/\?p=(\d+)/)?.[1] || 
                        url.match(/page(\d+)/)?.[1];
         
+        let linkHref;
         if (pageNum) {
-          return [`/article-${pageNum}`];
+          linkHref = `/article-${pageNum}`;
+        } else if (url.includes('category=tech')) {
+          linkHref = '/article-tech';
+        } else if (url.includes('posts')) {
+          linkHref = '/article-posts';
+        } else {
+          linkHref = '/article-0';
         }
         
-        // Base URLs
-        if (url.includes('category=tech')) {
-          return ['/article-tech'];
-        } else if (url.includes('posts')) {
-          return ['/article-posts'];
-        } else {
-          return ['/article-0'];
-        }
+        return Promise.resolve({ 
+          data: `<html><body><a href="${linkHref}">Article</a></body></html>` 
+        });
       }),
-    }));
-    
-    // Mock axios.create to return a mock instance
-    const mockAxiosInstance = {
-      get: mock(() => Promise.resolve({ data: '<html><body></body></html>' })),
       head: mock(() => Promise.resolve({ status: 200 })),
     };
     
@@ -54,13 +55,18 @@ describe('PaginationStrategy', () => {
     // Mock axios.head to always return success for existing tests
     axios.head = mock(() => Promise.resolve({ status: 200 })) as any;
     
+    // Also mock axios.get in case it's used directly
+    axios.get = mockAxiosInstance.get as any;
+    
     strategy = new PaginationStrategy();
   });
   
   afterEach(() => {
+    // Restore all mocks
     mock.restore();
     // Restore original axios methods
     axios.head = originalHead;
+    axios.get = originalGet;
     axios.create = originalCreate;
   });
   
@@ -82,10 +88,10 @@ describe('PaginationStrategy', () => {
       
       // Should have extracted links from 4 pages
       expect(result.urls).toHaveLength(4);
-      expect(result.urls).toContain('/article-posts'); // from posts
-      expect(result.urls).toContain('/article-1'); // from page 1
-      expect(result.urls).toContain('/article-2'); // from page 2
-      expect(result.urls).toContain('/article-3'); // from page 3
+      expect(result.urls).toContain('https://example.com/article-posts'); // from posts
+      expect(result.urls).toContain('https://example.com/article-1'); // from page 1
+      expect(result.urls).toContain('https://example.com/article-2'); // from page 2
+      expect(result.urls).toContain('https://example.com/article-3'); // from page 3
     });
     
     it('should generate URLs using query parameters', async () => {
@@ -101,10 +107,10 @@ describe('PaginationStrategy', () => {
       
       // Should have extracted links from 4 pages
       expect(result.urls).toHaveLength(4);
-      expect(result.urls).toContain('/article-posts'); // from posts
-      expect(result.urls).toContain('/article-1'); // from ?p=1
-      expect(result.urls).toContain('/article-2'); // from ?p=2
-      expect(result.urls).toContain('/article-3'); // from ?p=3
+      expect(result.urls).toContain('https://example.com/article-posts'); // from posts
+      expect(result.urls).toContain('https://example.com/article-1'); // from ?p=1
+      expect(result.urls).toContain('https://example.com/article-2'); // from ?p=2
+      expect(result.urls).toContain('https://example.com/article-3'); // from ?p=3
     });
     
     it('should append to existing query parameters', async () => {
@@ -120,9 +126,9 @@ describe('PaginationStrategy', () => {
       
       // Should have extracted links from 3 pages
       expect(result.urls).toHaveLength(3);
-      expect(result.urls).toContain('/article-tech'); // from base with category
-      expect(result.urls).toContain('/article-1'); // from page 1
-      expect(result.urls).toContain('/article-2'); // from page 2
+      expect(result.urls).toContain('https://example.com/article-tech'); // from base with category
+      expect(result.urls).toContain('https://example.com/article-1'); // from page 1
+      expect(result.urls).toContain('https://example.com/article-2'); // from page 2
     });
     
     it('should use default values when pageParam is specified', async () => {
@@ -139,7 +145,7 @@ describe('PaginationStrategy', () => {
       expect(result.urls.length).toBeGreaterThan(1);
       // Should have unique article links, not pagination URLs
       result.urls.forEach(url => {
-        expect(url).toMatch(/^\/article-/);
+        expect(url).toMatch(/article-/);
       });
     });
   });
@@ -163,9 +169,9 @@ describe('PaginationStrategy', () => {
       
       // Should extract links from 3 pages discovered via next links
       expect(result.urls).toHaveLength(3);
-      expect(result.urls).toContain('/article-1'); // from page1
-      expect(result.urls).toContain('/article-2'); // from page2
-      expect(result.urls).toContain('/article-3'); // from page3
+      expect(result.urls).toContain('https://example.com/article-1'); // from page1
+      expect(result.urls).toContain('https://example.com/article-2'); // from page2
+      expect(result.urls).toContain('https://example.com/article-3'); // from page3
       
       expect(mockLinkDiscoverer.discover).toHaveBeenCalledTimes(3);
       expect(mockLinkDiscoverer.discover).toHaveBeenCalledWith('https://example.com/page1', 'a.next-page');
@@ -212,9 +218,9 @@ describe('PaginationStrategy', () => {
       
       // Should extract links from 3 pages
       expect(result.urls).toHaveLength(3);
-      expect(result.urls).toContain('/article-1'); // from page1
-      expect(result.urls).toContain('/article-2'); // from page2
-      expect(result.urls).toContain('/article-3'); // from page3
+      expect(result.urls).toContain('https://example.com/article-1'); // from page1
+      expect(result.urls).toContain('https://example.com/article-2'); // from page2
+      expect(result.urls).toContain('https://example.com/article-3'); // from page3
     });
     
     it('should avoid infinite loops with circular links', async () => {
@@ -234,8 +240,8 @@ describe('PaginationStrategy', () => {
       
       // Should extract links from 2 pages (avoided circular loop)
       expect(result.urls).toHaveLength(2);
-      expect(result.urls).toContain('/article-1'); // from page1
-      expect(result.urls).toContain('/article-2'); // from page2
+      expect(result.urls).toContain('https://example.com/article-1'); // from page1
+      expect(result.urls).toContain('https://example.com/article-2'); // from page2
     });
   });
   
@@ -245,7 +251,7 @@ describe('PaginationStrategy', () => {
       
       // Should extract link from single page
       expect(result.urls).toHaveLength(1);
-      expect(result.urls[0]).toBe('/article-posts');
+      expect(result.urls[0]).toBe('https://example.com/article-posts');
     });
     
     it('should return only source URL when pagination config is empty', async () => {
@@ -257,7 +263,7 @@ describe('PaginationStrategy', () => {
       
       // Should extract link from single page
       expect(result.urls).toHaveLength(1);
-      expect(result.urls[0]).toBe('/article-posts');
+      expect(result.urls[0]).toBe('https://example.com/article-posts');
     });
   });
 });
