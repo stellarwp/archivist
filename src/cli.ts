@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import 'reflect-metadata';
 import { Command } from 'commander';
+import { confirm, input, select } from '@inquirer/prompts';
 import type { ArchivistConfig } from '../archivist.config';
 import { ArchivistConfigSchema, defaultConfig } from '../archivist.config';
 import { existsSync } from 'fs';
@@ -8,27 +9,6 @@ import path from 'path';
 import { VERSION, DEFAULT_USER_AGENT } from './version';
 
 const program = new Command();
-
-// Helper function for user input
-async function askQuestion(question: string): Promise<string> {
-  process.stdout.write(question);
-  
-  // Use Bun's stdin
-  const decoder = new TextDecoder();
-  const reader = Bun.stdin.stream().getReader();
-  
-  try {
-    const { value } = await reader.read();
-    reader.releaseLock();
-    if (value) {
-      return decoder.decode(value).trim();
-    }
-  } catch (error) {
-    console.error('[DEBUG] Error reading input:', error);
-  }
-  
-  return '';
-}
 
 program
   .name('archivist')
@@ -178,11 +158,14 @@ program
       logger.info(webCrawler.getCollectedLinksReport());
       
       // Ask for confirmation unless --no-confirm is used
-      if (options.confirm !== false) {
+      if (options.confirm !== false && process.stdin.isTTY) {
         logger.info('─'.repeat(50));
-        const response = await askQuestion('\nDo you want to proceed with the crawl? (yes/no): ');
+        const shouldProceed = await confirm({
+          message: 'Do you want to proceed with the crawl?',
+          default: true
+        });
         
-        if (!response || !['yes', 'y'].includes(response.toLowerCase())) {
+        if (!shouldProceed) {
           logger.info('Crawl cancelled.');
           return;
         }
@@ -207,57 +190,162 @@ program
 program
   .command('init')
   .description('Initialize a new archivist config file')
-  .action(async () => {
+  .option('--interactive', 'Use interactive mode to configure the file')
+  .action(async (options) => {
     // Lazy load DI dependencies
     const { initializeContainer } = await import('./di/container');
     
     // Initialize DI container
     initializeContainer();
     
-    const exampleConfig = {
-      archives: [
-        {
-          name: 'Example Documentation',
-          sources: [
-            {
-              url: 'https://example.com/docs',
-              name: 'Main Docs',
-              depth: 2
-            }
-          ],
-          output: {
-            directory: './archive/example-docs',
-            format: 'markdown',
-            fileNaming: 'url-based'
-          }
-        },
-        {
-          name: 'Blog Posts',
-          sources: 'https://example.com/blog',
-          output: {
-            directory: './archive/blog',
-            format: 'json',
-            fileNaming: 'title-based'
+    // Check if config already exists
+    if (existsSync('./archivist.config.json')) {
+      // Only prompt if we're in an interactive terminal
+      if (process.stdin.isTTY) {
+        const overwrite = await confirm({
+          message: 'archivist.config.json already exists. Do you want to overwrite it?',
+          default: false
+        });
+        
+        if (!overwrite) {
+          console.log('Init cancelled.');
+          return;
+        }
+      } else {
+        // In non-interactive mode, overwrite by default
+        console.log('archivist.config.json already exists. Overwriting...');
+      }
+    }
+    
+    let config: any;
+    
+    if (options.interactive) {
+      // Interactive mode
+      console.log('\n🚀 Let\'s create your archivist configuration!\n');
+      
+      const archiveName = await input({
+        message: 'What would you like to name your archive?',
+        default: 'My Documentation Archive'
+      });
+      
+      const sourceUrl = await input({
+        message: 'Enter the URL to archive:',
+        default: 'https://example.com/docs',
+        validate: (value) => {
+          try {
+            new URL(value);
+            return true;
+          } catch {
+            return 'Please enter a valid URL';
           }
         }
-      ],
-      crawl: {
-        maxConcurrency: 3,
-        delay: 1000,
-        userAgent: DEFAULT_USER_AGENT,
-        timeout: 30000
+      });
+      
+      const outputFormat = await select({
+        message: 'Select output format:',
+        choices: [
+          { name: 'Markdown', value: 'markdown' },
+          { name: 'JSON', value: 'json' },
+          { name: 'HTML', value: 'html' }
+        ],
+        default: 'markdown'
+      });
+      
+      const fileNaming = await select({
+        message: 'Select file naming strategy:',
+        choices: [
+          { name: 'URL-based (preserves URL structure)', value: 'url-based' },
+          { name: 'Title-based (uses page titles)', value: 'title-based' }
+        ],
+        default: 'url-based'
+      });
+      
+      const usePureMd = await confirm({
+        message: 'Do you want to use Pure.md for better content extraction? (requires API key)',
+        default: false
+      });
+      
+      let pureApiKey = '';
+      if (usePureMd) {
+        pureApiKey = await input({
+          message: 'Enter your Pure.md API key (or press Enter to set it later):',
+          default: ''
+        });
       }
-    };
+      
+      config = {
+        archives: [{
+          name: archiveName,
+          sources: sourceUrl,
+          output: {
+            directory: `./archive/${archiveName.toLowerCase().replace(/\s+/g, '-')}`,
+            format: outputFormat,
+            fileNaming: fileNaming
+          }
+        }],
+        crawl: {
+          maxConcurrency: 3,
+          delay: 1000,
+          userAgent: DEFAULT_USER_AGENT,
+          timeout: 30000
+        }
+      };
+      
+      if (pureApiKey) {
+        config.pure = { apiKey: pureApiKey };
+      }
+      
+    } else {
+      // Default example config
+      config = {
+        archives: [
+          {
+            name: 'Example Documentation',
+            sources: [
+              {
+                url: 'https://example.com/docs',
+                name: 'Main Docs',
+                depth: 2
+              }
+            ],
+            output: {
+              directory: './archive/example-docs',
+              format: 'markdown',
+              fileNaming: 'url-based'
+            }
+          },
+          {
+            name: 'Blog Posts',
+            sources: 'https://example.com/blog',
+            output: {
+              directory: './archive/blog',
+              format: 'json',
+              fileNaming: 'title-based'
+            }
+          }
+        ],
+        crawl: {
+          maxConcurrency: 3,
+          delay: 1000,
+          userAgent: DEFAULT_USER_AGENT,
+          timeout: 30000
+        }
+      };
+    }
 
-    await Bun.write('./archivist.config.json', JSON.stringify(exampleConfig, null, 2));
-    console.log('Created archivist.config.json');
-    console.log('\nTo use Pure.md for content extraction, add a "pure" section:');
-    console.log('  "pure": {');
-    console.log('    "apiKey": "your-api-key-here"');
-    console.log('  }');
-    console.log('\nOr set the PURE_API_KEY environment variable.');
-    console.log('\nNext steps:');
-    console.log('1. Edit archivist.config.json to add your URLs');
+    await Bun.write('./archivist.config.json', JSON.stringify(config, null, 2));
+    console.log('\n✅ Created archivist.config.json');
+    
+    if (!options.interactive || !config.pure) {
+      console.log('\n💡 To use Pure.md for content extraction, add a "pure" section:');
+      console.log('  "pure": {');
+      console.log('    "apiKey": "your-api-key-here"');
+      console.log('  }');
+      console.log('\nOr set the PURE_API_KEY environment variable.');
+    }
+    
+    console.log('\n📝 Next steps:');
+    console.log('1. Edit archivist.config.json to add more URLs or adjust settings');
     console.log('2. Run: archivist crawl');
   });
 
@@ -265,7 +353,7 @@ program
   .command('report')
   .description('Show report of last collected URLs')
   .option('-f, --file <path>', 'Path to collected links JSON file', 'collected-links.json')
-  .action(async (options) => {
+  .action(async (_options) => {
     try {
       // Lazy load DI dependencies
       const { initializeContainer, appContainer } = await import('./di/container');

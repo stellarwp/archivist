@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Interactive Prompts with @inquirer/prompts**
+  - Replaced custom input handling with professional prompts from Inquirer.js
+  - Added `--interactive` flag to `init` command for guided configuration setup
+  - Interactive mode includes archive name, URL validation, format selection, and API key setup
+  - Enhanced crawl confirmation prompt with better UX
+  - Automatic TTY detection for CI/CD compatibility
+
 - **Pre-Crawl URL Collection and Confirmation**
   - Always collect and display all URLs before starting the crawl
   - Interactive confirmation prompt to review URLs before proceeding
@@ -16,7 +23,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--no-confirm` flag to skip the confirmation prompt
   - Helps users verify patterns and avoid accidental over-crawling
 
+### Changed
+
+- **Dependency Injection Implementation**
+  - Migrated to tsyringe for proper dependency injection
+  - Added reflect-metadata for decorator support
+  - Improved service architecture with singleton pattern
+  - Better separation of concerns and testability
+
 ### Fixed
+
+- **CI/CD Compatibility**
+  - Fixed reflect-metadata loading issues in CI environments
+  - Added proper polyfill imports for spawned CLI processes
+  - Non-interactive environments now skip prompts automatically
+  - All tests pass in both local and CI environments
 
 - **Pagination Strategy**
   - Now extracts content links from each paginated page

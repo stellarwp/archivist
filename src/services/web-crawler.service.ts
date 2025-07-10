@@ -99,10 +99,8 @@ export class WebCrawlerService {
   }
   
   async promptForConfirmation(): Promise<boolean> {
-    console.log('\nDo you want to proceed with the crawl? (yes/no): ');
-    
-    // For now, we'll need to handle this in the CLI layer
-    // as the prompt function needs to be passed in
+    // This method is kept for backward compatibility
+    // but the actual prompting is now handled in the CLI layer
     return true;
   }
   
