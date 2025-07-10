@@ -415,8 +415,13 @@ class ArchiveCrawler {
       collectedUrls.add(url);
     }
     
+    console.log(`  → Initial queue size: ${this.queue.size}, processing depth...`);
+    
     // Process depth if needed (discover links from pages)
-    while (this.queue.size > 0) {
+    let iterations = 0;
+    const maxIterations = 1000; // Safety limit
+    while (this.queue.size > 0 && iterations < maxIterations) {
+      iterations++;
       const url = this.queue.values().next().value;
       if (!url) break;
       
@@ -436,6 +441,8 @@ class ArchiveCrawler {
           if (processedForDepth.size > 1) {
             await new Promise(resolve => setTimeout(resolve, this.crawlConfig.delay));
           }
+          
+          console.log(`    → Discovering links from: ${url}`);
           
           // Discover links from this page
           const discovered = await this.linkDiscoverer.discoverLinks(url);
@@ -476,6 +483,11 @@ class ArchiveCrawler {
       }
     }
     
+    if (iterations >= maxIterations) {
+      console.warn(`  ⚠ Warning: Reached max iterations limit (${maxIterations}) during URL collection`);
+    }
+    
+    console.log(`  → Collection complete: ${collectedUrls.size} URLs found`);
     return Array.from(collectedUrls);
   }
 

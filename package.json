@@ -44,7 +44,8 @@
     "test:cli": "bun test tests/integration/cli-commands.test.ts",
     "lint": "bunx tsc --noEmit",
     "prepublishOnly": "bunx tsc --noEmit && bun test",
-    "build:action": "node build/build-action.js"
+    "build:action": "node build/build-action.js",
+    "version:update": "bun run scripts/update-version.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

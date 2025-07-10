@@ -46,7 +46,7 @@
   "crawl": {
     "maxConcurrency": 4,
     "delay": 1000,
-    "userAgent": "Archivist/1.0 (Documentation Crawler)",
+    "userAgent": "Archivist/0.1.0-beta.6 (Documentation Crawler)",
     "timeout": 30000
   },
   "pure": {

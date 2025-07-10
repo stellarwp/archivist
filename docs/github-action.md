@@ -73,7 +73,7 @@ For GitHub Actions, use JSON format instead of TypeScript:
   "crawl": {
     "maxConcurrency": 3,
     "delay": 1000,
-    "userAgent": "Archivist/1.0",
+    "userAgent": "Archivist/0.1.0-beta.6",
     "timeout": 30000
   }
 }

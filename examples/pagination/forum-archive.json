@@ -44,7 +44,7 @@
   "crawl": {
     "maxConcurrency": 1,
     "delay": 5000,
-    "userAgent": "Archivist/1.0 (Forum Archiver)",
+    "userAgent": "Archivist/0.1.0-beta.6",
     "timeout": 60000
   },
   "pure": {

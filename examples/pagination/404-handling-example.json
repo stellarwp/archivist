@@ -40,7 +40,7 @@
     }
   ],
   "crawl": {
-    "userAgent": "Archivist/1.0 (Pagination with 404 handling)",
+    "userAgent": "Archivist/0.1.0-beta.6",
     "delay": 500,
     "timeout": 30000
   }

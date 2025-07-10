@@ -163,7 +163,7 @@ archivist crawl
   "crawl": {
     "maxConcurrency": 3,
     "delay": 1000,
-    "userAgent": "Archivist/1.0",
+    "userAgent": "Archivist/0.1.0-beta.6",
     "timeout": 30000
   },
   "pure": {
@@ -310,7 +310,7 @@ For more complete examples, check out the [examples directory](./examples/).
   "crawl": {
     "maxConcurrency": 3,
     "delay": 2000,
-    "userAgent": "Archivist/1.0"
+    "userAgent": "Archivist/0.1.0-beta.6"
   },
   "pure": {
     "apiKey": "your-api-key"

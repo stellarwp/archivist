@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { getAxiosConfig } from '../utils/axios-config';
 import { shouldIncludeUrl } from '../utils/pattern-matcher';
+import { DEFAULT_USER_AGENT } from '../version';
 
 export interface LinkDiscoveryOptions {
   userAgent: string;
@@ -29,7 +30,7 @@ export class LinkDiscoverer {
       // It's an axios instance
       this.axiosInstance = options;
       this.options = {
-        userAgent: 'Archivist/1.0',
+        userAgent: DEFAULT_USER_AGENT,
         timeout: 30000,
       };
     } else if (options && typeof options === 'object') {
@@ -39,7 +40,7 @@ export class LinkDiscoverer {
     } else {
       // Fallback for edge cases
       this.options = {
-        userAgent: 'Archivist/1.0',
+        userAgent: DEFAULT_USER_AGENT,
         timeout: 30000,
       };
       this.axiosInstance = axios;

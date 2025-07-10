@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_USER_AGENT } from './src/version';
 
 // Single source can be a URL string or a detailed object
 const SourceSchema = z.union([
@@ -43,7 +44,7 @@ export const ArchivistConfigSchema = z.object({
   crawl: z.object({
     maxConcurrency: z.number().min(1).max(10).default(3),
     delay: z.number().min(0).default(1000),
-    userAgent: z.string().default('Archivist/1.0'),
+    userAgent: z.string().default(DEFAULT_USER_AGENT),
     timeout: z.number().min(1000).default(30000),
     debug: z.boolean().default(false).optional(),
   }),
@@ -61,7 +62,7 @@ export const defaultConfig: ArchivistConfig = {
   crawl: {
     maxConcurrency: 3,
     delay: 1000,
-    userAgent: 'Archivist/1.0',
+    userAgent: DEFAULT_USER_AGENT,
     timeout: 30000,
   },
 };
