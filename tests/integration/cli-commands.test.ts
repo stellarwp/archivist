@@ -8,7 +8,7 @@ import { join } from 'path';
 describe('CLI Commands', () => {
   let testDir: string;
   let originalCwd: string;
-  const cliPath = join(__dirname, '../../src/cli.ts');
+  const cliPath = join(__dirname, '../../bin/archivist');
 
   beforeEach(() => {
     // Store original working directory
