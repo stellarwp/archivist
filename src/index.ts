@@ -3,6 +3,9 @@
  * @description Web content archiver built with Bun and TypeScript
  */
 
+// Import reflect-metadata at the very beginning
+import 'reflect-metadata';
+
 // Export DI container and services
 export { appContainer, initializeContainer, resetContainer } from './di/container';
 

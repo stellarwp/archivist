@@ -17,7 +17,7 @@
   "module": "src/index.ts",
   "type": "module",
   "bin": {
-    "archivist": "./src/cli.ts"
+    "archivist": "./bin/archivist"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -25,6 +25,7 @@
   },
   "files": [
     "src",
+    "bin",
     "archivist.config.ts",
     "README.md",
     "LICENSE",
