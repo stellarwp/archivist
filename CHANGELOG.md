@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.8] - 2025-01-10
+
+### Fixed
+
+- **Complete Fix for TypeScript Decorator Metadata Issue**
+  - Moved all service imports to top level in cli.ts
+  - Removed dynamic imports that were preventing proper metadata initialization
+  - Ensures tsyringe can properly resolve dependencies when running via bunx
+  - Fixes the persistent "TypeInfo not known for WebCrawlerService" error
+
 ## [0.1.0-beta.7] - 2025-01-10
 
 ### Fixed
