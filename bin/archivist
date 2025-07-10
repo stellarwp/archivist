@@ -1,3 +1,0 @@
-#!/usr/bin/env bun
-import 'reflect-metadata';
-import '../src/cli.ts';
