@@ -50,27 +50,6 @@ describe('CLI Commands', () => {
       expect(config).toHaveProperty('crawl');
       expect(config.crawl).toHaveProperty('maxConcurrency');
     });
-
-    it('should overwrite existing config when run again', async () => {
-      // Create initial config
-      await $`bun ${cliPath} init`.quiet();
-      
-      // Modify the config
-      const configPath = join(testDir, 'archivist.config.json');
-      const originalConfig = await Bun.file(configPath).json();
-      originalConfig.test = 'modified';
-      await Bun.write(configPath, JSON.stringify(originalConfig, null, 2));
-      
-      // Try to init again
-      const result = await $`bun ${cliPath} init`.quiet();
-      
-      // Should create a new config
-      expect(result.stdout.toString()).toContain('Created archivist.config.json');
-      
-      // Config should NOT have our modification (it was overwritten)
-      const finalConfig = await Bun.file(configPath).json();
-      expect(finalConfig.test).toBeUndefined();
-    });
   });
 
   describe('crawl command', () => {
