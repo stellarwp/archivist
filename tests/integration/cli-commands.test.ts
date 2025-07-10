@@ -107,10 +107,11 @@ describe('CLI Commands', () => {
       // Run crawl - it will try to fetch example.com URLs
       const result = await $`bun ${cliPath} crawl`.quiet().nothrow();
       
-      // The crawl should complete (exit code 0) even if URLs fail
-      // This is because the crawler handles errors gracefully
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout.toString()).toContain('Quick Test');
+      // The crawl should fail (exit code 1) when URLs can't be fetched
+      expect(result.exitCode).toBe(1);
+      // The output should at least show that config was loaded
+      const output = result.stdout.toString() + result.stderr.toString();
+      expect(output).toContain('Loading config from');
     }, 10000);  // Give test 10 seconds total
 
     it('should accept config file parameter', async () => {

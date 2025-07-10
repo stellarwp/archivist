@@ -1,6 +1,8 @@
+import 'reflect-metadata';
 import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test';
 import { PaginationStrategy } from '../../../src/strategies/pagination-strategy';
 import axios from 'axios';
+import { initializeContainer, resetContainer } from '../../../src/di/container';
 
 // Store original axios methods
 const originalHead = axios.head;
@@ -25,6 +27,12 @@ describe('PaginationStrategy 404 Handling', () => {
         });
       }),
       head: mock(() => Promise.resolve({ status: 200 })),
+      post: mock(),
+      defaults: {},
+      interceptors: {
+        request: { use: mock() },
+        response: { use: mock() }
+      }
     };
     
     axios.create = mock(() => mockAxiosInstance) as any;
@@ -32,7 +40,10 @@ describe('PaginationStrategy 404 Handling', () => {
     // Also mock axios.get in case it's used directly
     axios.get = mockAxiosInstance.get as any;
     
-    // Create strategy after mocking
+    // Initialize DI container after mocking
+    initializeContainer();
+    
+    // Create strategy after DI initialization
     strategy = new PaginationStrategy();
   });
   
@@ -43,6 +54,8 @@ describe('PaginationStrategy 404 Handling', () => {
     axios.head = originalHead;
     axios.get = originalGet;
     axios.create = originalCreate;
+    // Reset DI container
+    resetContainer();
   });
   
   it('should stop pagination when encountering 404 after retry', async () => {
