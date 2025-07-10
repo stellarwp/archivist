@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.6] - 2025-01-09
+
 ### Added
 
 - **Clean Output Directory Option**
@@ -50,12 +52,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Returns article/post links instead of pagination pages themselves
   - Filters out pagination navigation links from results
   - Ensures only content pages are sent to Pure.md
-
-## [0.1.0-beta.6] - 2025-01-09
-
-### Fixed
-
-- **Pagination Strategy**
   - Fix hanging issue when using pagination strategy
   - Improve crawl script execution for paginated content
 
