@@ -2,15 +2,32 @@ import { appContainer } from '../di/container';
 import { LinkDiscoverer } from '../services/link-discoverer';
 import { DEFAULT_USER_AGENT } from '../version';
 
+/**
+ * Options for link extraction from a web page
+ * @interface LinkExtractionOptions
+ */
 export interface LinkExtractionOptions {
+  /** URL to extract links from */
   url: string;
+  /** CSS selector for finding links (default: 'a[href]') */
   linkSelector?: string;
+  /** Patterns that links must match to be included */
   includePatterns?: string[];
+  /** Patterns that exclude links from results */
   excludePatterns?: string[];
+  /** User agent string for HTTP requests */
   userAgent?: string;
+  /** Request timeout in milliseconds */
   timeout?: number;
 }
 
+/**
+ * Extracts all links from a web page with optional filtering.
+ * Uses LinkDiscoverer service with fallback to direct implementation.
+ * 
+ * @param {LinkExtractionOptions} options - Options for link extraction
+ * @returns {Promise<string[]>} Array of discovered absolute URLs
+ */
 export async function extractLinksFromPage(options: LinkExtractionOptions): Promise<string[]> {
   const { url, linkSelector, includePatterns, excludePatterns, userAgent = DEFAULT_USER_AGENT, timeout = 30000 } = options;
   

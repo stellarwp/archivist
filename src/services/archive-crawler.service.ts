@@ -14,16 +14,40 @@ import { extractLinksFromPage } from '../utils/link-extractor';
 import { shouldIncludeUrl } from '../utils/pattern-matcher';
 import { StrategyFactory as SourceStrategyFactory } from '../strategies/strategy-factory';
 
+/**
+ * Information about pagination discovery process
+ * @interface PaginationInfo
+ */
 interface PaginationInfo {
+  /** The original source URL that was paginated */
   sourceUrl: string;
+  /** Number of pages discovered during pagination */
   pagesDiscovered: number;
+  /** Map of page URLs to their discovered links */
   linksPerPage: Map<string, string[]>;
 }
 
+/**
+ * Service responsible for crawling web archives and collecting content.
+ * Handles URL discovery, content extraction, and result persistence.
+ * 
+ * @class ArchiveCrawlerService
+ * @singleton
+ */
 @singleton()
 export class ArchiveCrawlerService {
+  /** Stores information about the last pagination operation */
   private lastPaginationInfo: PaginationInfo | null = null;
   
+  /**
+   * Creates an instance of ArchiveCrawlerService
+   * @param {ConfigService} configService - Service for accessing configuration
+   * @param {StateService} stateService - Service for managing crawl state
+   * @param {LoggerService} logger - Service for logging
+   * @param {PureMdClient} pureMdClient - Client for Pure.md content extraction
+   * @param {LinkDiscoverer} linkDiscoverer - Service for discovering links on pages
+   * @param {HttpService} httpService - Service for making HTTP requests
+   */
   constructor(
     private configService: ConfigService,
     private stateService: StateService,
@@ -33,6 +57,14 @@ export class ArchiveCrawlerService {
     private httpService: HttpService
   ) {}
   
+  /**
+   * Collects all URLs from a source based on its configuration.
+   * Handles different strategies (explorer, pagination) and applies filtering.
+   * 
+   * @param {string} sourceUrl - The starting URL to collect from
+   * @param {SourceConfig} source - Configuration for how to collect URLs
+   * @returns {Promise<string[]>} Array of discovered URLs after filtering
+   */
   async collectUrlsFromSource(sourceUrl: string, source: SourceConfig): Promise<string[]> {
     this.lastPaginationInfo = null;
     
@@ -82,6 +114,17 @@ export class ArchiveCrawlerService {
     return filteredUrls;
   }
   
+  /**
+   * Discovers URLs by crawling to a specified depth.
+   * Uses breadth-first search to explore links.
+   * 
+   * @private
+   * @param {string} startUrl - The URL to start crawling from
+   * @param {number} maxDepth - Maximum depth to crawl (0 = only start URL)
+   * @param {string[]} [includePatterns] - Patterns that URLs must match to be included
+   * @param {string[]} [excludePatterns] - Patterns that exclude URLs from being crawled
+   * @returns {Promise<string[]>} Array of discovered URLs
+   */
   private async discoverUrlsWithDepth(
     startUrl: string,
     maxDepth: number,
@@ -121,10 +164,24 @@ export class ArchiveCrawlerService {
     return Array.from(discovered);
   }
   
+  /**
+   * Returns information about the last pagination operation.
+   * Used for debugging and progress reporting.
+   * 
+   * @returns {PaginationInfo | null} Pagination info or null if no pagination occurred
+   */
   getLastPaginationInfo(): PaginationInfo | null {
     return this.lastPaginationInfo;
   }
   
+  /**
+   * Crawls all URLs in the archive's queue.
+   * Processes URLs in batches respecting concurrency limits and delays.
+   * 
+   * @param {ArchiveConfig} archive - Configuration for the archive being crawled
+   * @param {ArchiveState} archiveState - Current state of the crawl operation
+   * @returns {Promise<void>}
+   */
   async crawlUrls(archive: ArchiveConfig, archiveState: ArchiveState): Promise<void> {
     const crawlConfig = this.configService.getCrawlConfig();
     const delay = crawlConfig.delay || 1000;
@@ -168,6 +225,14 @@ export class ArchiveCrawlerService {
     }
   }
   
+  /**
+   * Fetches content from a URL using Pure.md API.
+   * Falls back to placeholder content if extraction fails.
+   * 
+   * @private
+   * @param {string} url - The URL to fetch content from
+   * @returns {Promise<string>} Extracted content or placeholder text
+   */
   private async fetchPageContent(url: string): Promise<string> {
     try {
       return await this.pureMdClient.fetchContent(url);
@@ -177,11 +242,29 @@ export class ArchiveCrawlerService {
     }
   }
   
+  /**
+   * Extracts the title from markdown content.
+   * Looks for the first H1 heading in the content.
+   * 
+   * @private
+   * @param {string} content - Markdown content to extract title from
+   * @returns {string} Extracted title or 'Untitled' if not found
+   */
   private extractTitle(content: string): string {
     const titleMatch = content.match(/^#\s+(.+)$/m);
     return titleMatch?.[1] || 'Untitled';
   }
   
+  /**
+   * Saves crawl results to the file system.
+   * Creates output directory, saves individual files, and generates metadata.
+   * 
+   * @param {ArchiveConfig} archive - Configuration for the archive
+   * @param {ArchiveState} archiveState - State containing crawl results
+   * @param {Object} options - Save options
+   * @param {boolean} [options.clean] - Whether to clean the output directory first
+   * @returns {Promise<string>} Path to the generated metadata file
+   */
   async saveResults(archive: ArchiveConfig, archiveState: ArchiveState, options: { clean?: boolean } = {}): Promise<string> {
     // Clean directory if requested
     if (options.clean && existsSync(archive.output.directory)) {

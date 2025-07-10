@@ -13,10 +13,15 @@
   },
   "license": "MIT",
   "author": "StellarWP",
-  "module": "src/cli.ts",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
   "type": "module",
   "bin": {
     "archivist": "./src/cli.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
   },
   "files": [
     "src",
@@ -45,7 +50,10 @@
     "lint": "bunx tsc --noEmit",
     "prepublishOnly": "bunx tsc --noEmit && bun test",
     "build:action": "node build/build-action.js",
-    "version:update": "bun run scripts/update-version.ts"
+    "version:update": "bun run scripts/update-version.ts",
+    "docs": "typedoc",
+    "docs:watch": "typedoc --watch",
+    "docs:markdown": "typedoc --plugin typedoc-plugin-markdown --out docs/api"
   },
   "devDependencies": {
     "@types/bun": "latest",

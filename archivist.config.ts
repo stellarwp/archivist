@@ -28,30 +28,47 @@ const SourcesSchema = z.union([
   z.array(SourceSchema)
 ]);
 
+// Output configuration schema
+const OutputSchema = z.object({
+  directory: z.string().default('./archive'),
+  format: z.enum(['markdown', 'html', 'json']).default('markdown'),
+  fileNaming: z.enum(['url-based', 'title-based', 'hash-based']).default('url-based'),
+});
+
 // Individual archive configuration
 const ArchiveSchema = z.object({
   name: z.string(),
   sources: SourcesSchema,
-  output: z.object({
-    directory: z.string().default('./archive'),
-    format: z.enum(['markdown', 'html', 'json']).default('markdown'),
-    fileNaming: z.enum(['url-based', 'title-based', 'hash-based']).default('url-based'),
-  }),
+  output: OutputSchema,
+});
+
+// Export schema objects for extracting nested types
+const CrawlConfigSchema = z.object({
+  maxConcurrency: z.number().min(1).max(10).default(3),
+  delay: z.number().min(0).default(1000),
+  userAgent: z.string().default(DEFAULT_USER_AGENT),
+  timeout: z.number().min(1000).default(30000),
+  debug: z.boolean().default(false).optional(),
+});
+
+const PaginationConfigSchema = z.object({
+  startPage: z.number().default(1).optional(),
+  maxPages: z.number().optional(),
+  pageParam: z.string().default('page').optional(),
+  pagePattern: z.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
+  nextLinkSelector: z.string().optional().describe('CSS selector for next page link'),
 });
 
 // Export types
 export type SourceConfig = z.infer<typeof SourceSchema>;
 export type ArchiveConfig = z.infer<typeof ArchiveSchema>;
+export type OutputConfig = z.infer<typeof OutputSchema>;
+export type CrawlConfig = z.infer<typeof CrawlConfigSchema>;
+export type PaginationConfig = z.infer<typeof PaginationConfigSchema>;
 
 export const ArchivistConfigSchema = z.object({
   archives: z.array(ArchiveSchema),
-  crawl: z.object({
-    maxConcurrency: z.number().min(1).max(10).default(3),
-    delay: z.number().min(0).default(1000),
-    userAgent: z.string().default(DEFAULT_USER_AGENT),
-    timeout: z.number().min(1000).default(30000),
-    debug: z.boolean().default(false).optional(),
-  }),
+  crawl: CrawlConfigSchema,
   pure: z.object({
     apiKey: z.string().optional(),
   }).optional(),

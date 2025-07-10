@@ -6,14 +6,34 @@ import { extractLinksFromPage } from '../utils/link-extractor';
 import axios from 'axios';
 import { getAxiosConfig } from '../utils/axios-config';
 
+/**
+ * Strategy for handling paginated content.
+ * Discovers and extracts links from multiple pages following pagination patterns.
+ * 
+ * @class PaginationStrategy
+ * @extends BaseStrategy
+ */
 export class PaginationStrategy extends BaseStrategy {
+  /** Strategy type identifier */
   type = 'pagination';
+  /** Cached LinkDiscoverer instance */
   private linkDiscoverer: LinkDiscoverer | null = null;
   
+  /**
+   * Creates an instance of PaginationStrategy
+   */
   constructor() {
     super();
   }
   
+  /**
+   * Gets or creates a LinkDiscoverer instance.
+   * Uses dependency injection with fallback error handling.
+   * 
+   * @private
+   * @returns {LinkDiscoverer} LinkDiscoverer instance
+   * @throws {Error} If LinkDiscoverer cannot be resolved
+   */
   private getLinkDiscoverer(): LinkDiscoverer {
     if (!this.linkDiscoverer) {
       try {
@@ -26,6 +46,20 @@ export class PaginationStrategy extends BaseStrategy {
     return this.linkDiscoverer;
   }
   
+  /**
+   * Executes the pagination strategy to discover links across multiple pages.
+   * Supports pattern-based, query parameter, and next link pagination.
+   * 
+   * @param {string} sourceUrl - Starting URL for pagination
+   * @param {Object} config - Configuration with pagination settings
+   * @param {Object} [config.pagination] - Pagination configuration
+   * @param {string} [config.pagination.pagePattern] - URL pattern with {page} placeholder
+   * @param {string} [config.pagination.pageParam] - Query parameter name for page number
+   * @param {number} [config.pagination.startPage] - First page number
+   * @param {number} [config.pagination.maxPages] - Maximum pages to crawl
+   * @param {string} [config.pagination.nextLinkSelector] - CSS selector for next page link
+   * @returns {Promise<StrategyResult>} Result containing all discovered content links
+   */
   async execute(sourceUrl: string, config: any): Promise<StrategyResult> {
     const pagination = config.pagination || {};
     const pageUrls: string[] = [];
