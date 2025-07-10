@@ -6,11 +6,6 @@ import { ArchivistConfigSchema, defaultConfig } from '../archivist.config';
 import { existsSync } from 'fs';
 import path from 'path';
 import { VERSION, DEFAULT_USER_AGENT } from './version';
-import { initializeContainer, appContainer } from './di/container';
-import { ConfigService } from './services/config.service';
-import { StateService } from './services/state.service';
-import { WebCrawlerService } from './services/web-crawler.service';
-import { LoggerService } from './services/logger.service';
 
 const program = new Command();
 
@@ -54,6 +49,13 @@ program
   .option('--save-links <path>', 'Save collected links to specified JSON file', 'collected-links.json')
   .action(async (options) => {
     try {
+      // Lazy load DI dependencies
+      const { initializeContainer, appContainer } = await import('./di/container');
+      const { ConfigService } = await import('./services/config.service');
+      const { StateService } = await import('./services/state.service');
+      const { WebCrawlerService } = await import('./services/web-crawler.service');
+      const { LoggerService } = await import('./services/logger.service');
+      
       // Initialize DI container
       initializeContainer();
       
@@ -206,6 +208,9 @@ program
   .command('init')
   .description('Initialize a new archivist config file')
   .action(async () => {
+    // Lazy load DI dependencies
+    const { initializeContainer } = await import('./di/container');
+    
     // Initialize DI container
     initializeContainer();
     
@@ -260,8 +265,13 @@ program
   .command('report')
   .description('Show report of last collected URLs')
   .option('-f, --file <path>', 'Path to collected links JSON file', 'collected-links.json')
-  .action((options) => {
+  .action(async (options) => {
     try {
+      // Lazy load DI dependencies
+      const { initializeContainer, appContainer } = await import('./di/container');
+      const { WebCrawlerService } = await import('./services/web-crawler.service');
+      const { LoggerService } = await import('./services/logger.service');
+      
       initializeContainer();
       const webCrawler = appContainer.resolve(WebCrawlerService);
       const logger = appContainer.resolve(LoggerService);
