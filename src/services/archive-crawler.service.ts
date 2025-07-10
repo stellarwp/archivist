@@ -1,6 +1,6 @@
 import { singleton } from 'tsyringe';
 import { join } from 'path';
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'fs';
 import { ConfigService } from './config.service';
 import { StateService, type ArchiveState } from './state.service';
 import { LoggerService } from './logger.service';
@@ -182,7 +182,13 @@ export class ArchiveCrawlerService {
     return titleMatch?.[1] || 'Untitled';
   }
   
-  async saveResults(archive: ArchiveConfig, archiveState: ArchiveState): Promise<string> {
+  async saveResults(archive: ArchiveConfig, archiveState: ArchiveState, options: { clean?: boolean } = {}): Promise<string> {
+    // Clean directory if requested
+    if (options.clean && existsSync(archive.output.directory)) {
+      this.logger.info(`  Cleaning output directory: ${archive.output.directory}`);
+      rmSync(archive.output.directory, { recursive: true, force: true });
+    }
+    
     // Create output directory
     mkdirSync(archive.output.directory, { recursive: true });
     

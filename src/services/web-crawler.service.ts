@@ -104,7 +104,7 @@ export class WebCrawlerService {
     return true;
   }
   
-  async crawlAll(): Promise<void> {
+  async crawlAll(options: { clean?: boolean } = {}): Promise<void> {
     const archives = this.configService.getArchives();
     const collectedUrls = this.stateService.getAllCollectedUrls();
     
@@ -137,8 +137,8 @@ export class WebCrawlerService {
       // Crawl all URLs
       await this.archiveCrawler.crawlUrls(archive, archiveState);
       
-      // Save results
-      const metadataPath = await this.archiveCrawler.saveResults(archive, archiveState);
+      // Save results (pass clean option)
+      const metadataPath = await this.archiveCrawler.saveResults(archive, archiveState, { clean: options.clean });
       this.logger.info(`\n✓ Archive saved to: ${metadataPath}`);
     }
     

@@ -933,6 +933,12 @@ archivist crawl --dry-run
 
 # Skip confirmation prompt
 archivist crawl --no-confirm
+
+# Clean output directories before crawling
+archivist crawl --clean
+
+# Clean and skip confirmation
+archivist crawl --clean --no-confirm
 ```
 
 ## Output Formats

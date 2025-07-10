@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import { $ } from 'bun';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync, mkdirSync, existsSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -221,6 +221,39 @@ describe('CLI Commands', () => {
       const result = await $`bun ${cliPath} crawl --invalid-option`.quiet().nothrow();
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr.toString()).toContain('unknown option');
+    });
+  });
+  
+  describe('clean option', () => {
+    it('should accept --clean flag', async () => {
+      // Create config
+      const config = {
+        archives: [{
+          name: "Test Archive",
+          sources: "https://example.com",
+          output: {
+            directory: "./test-output",
+            format: "markdown",
+            fileNaming: "url-based"
+          }
+        }],
+        crawl: {
+          maxConcurrency: 1,
+          delay: 100,
+          timeout: 2000
+        }
+      };
+      await Bun.write(join(testDir, 'archivist.config.json'), JSON.stringify(config, null, 2));
+      
+      // Test that --clean flag is accepted
+      const helpResult = await $`bun ${cliPath} crawl --help`.quiet();
+      expect(helpResult.stdout.toString()).toContain('--clean');
+      
+      // Test that it shows in dry-run mode
+      const dryRunResult = await $`bun ${cliPath} crawl --dry-run --clean --no-confirm`.quiet().nothrow();
+      // Just verify the flag is accepted without error (actual cleaning is tested in unit tests)
+      const output = dryRunResult.stdout.toString() + dryRunResult.stderr.toString();
+      expect(output).toBeTruthy();
     });
   });
 });

@@ -27,6 +27,7 @@ program
   .option('--no-confirm', 'Skip confirmation prompt and proceed directly')
   .option('--show-all-urls', 'Show all URLs instead of just the first 20')
   .option('--save-links <path>', 'Save collected links to specified JSON file', 'collected-links.json')
+  .option('--clean', 'Clean output directories before crawling')
   .action(async (options) => {
     try {
       // Lazy load DI dependencies
@@ -160,6 +161,12 @@ program
       // Ask for confirmation unless --no-confirm is used
       if (options.confirm !== false && process.stdin.isTTY) {
         logger.info('─'.repeat(50));
+        
+        // If --clean is specified, show additional warning
+        if (options.clean) {
+          logger.info('⚠️  WARNING: --clean flag will delete all existing content in output directories!');
+        }
+        
         const shouldProceed = await confirm({
           message: 'Do you want to proceed with the crawl?',
           default: true
@@ -179,7 +186,7 @@ program
       
       // Start crawling
       logger.info(`\nStarting crawl of ${config.archives.length} archive(s)...`);
-      await webCrawler.crawlAll();
+      await webCrawler.crawlAll({ clean: options.clean || false });
       
     } catch (error) {
       console.error('Error:', error);
