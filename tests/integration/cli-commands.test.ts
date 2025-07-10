@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import { $ } from 'bun';
 import { mkdtempSync, rmSync } from 'fs';
