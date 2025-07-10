@@ -23,8 +23,8 @@ Some text with [a link](https://test.local/link1) and
 [another link](https://test.local/link2).
 `;
       const result = parseMarkdownContent(markdown, testUrl);
-      expect(result.metadata.links).toContain('https://test.local/link1');
-      expect(result.metadata.links).toContain('https://test.local/link2');
+      expect(result.metadata?.links).toContain('https://test.local/link1');
+      expect(result.metadata?.links).toContain('https://test.local/link2');
     });
 
     it('should extract plain URLs', () => {
@@ -33,14 +33,14 @@ Check out https://test.local/direct and
 also visit https://test.local/another
 `;
       const result = parseMarkdownContent(markdown, testUrl);
-      expect(result.metadata.links).toContain('https://test.local/direct');
-      expect(result.metadata.links).toContain('https://test.local/another');
+      expect(result.metadata?.links).toContain('https://test.local/direct');
+      expect(result.metadata?.links).toContain('https://test.local/another');
     });
 
     it('should convert relative links to absolute', () => {
       const markdown = '[Relative Link](/relative/path)';
       const result = parseMarkdownContent(markdown, testUrl);
-      expect(result.metadata.links).toContain('https://test.local/relative/path');
+      expect(result.metadata?.links).toContain('https://test.local/relative/path');
     });
 
     it('should ignore anchor and mailto links', () => {
@@ -50,8 +50,8 @@ also visit https://test.local/another
 [External](https://external.com)
 `;
       const result = parseMarkdownContent(markdown, testUrl);
-      expect(result.metadata.links).toHaveLength(1);
-      expect(result.metadata.links[0]).toBe('https://external.com');
+      expect(result.metadata?.links).toHaveLength(1);
+      expect(result.metadata?.links[0]).toBe('https://external.com');
     });
 
     it('should deduplicate links', () => {
@@ -61,8 +61,8 @@ also visit https://test.local/another
 https://test.local/same
 `;
       const result = parseMarkdownContent(markdown, testUrl);
-      expect(result.metadata.links).toHaveLength(1);
-      expect(result.metadata.links[0]).toBe('https://test.local/same');
+      expect(result.metadata?.links).toHaveLength(1);
+      expect(result.metadata?.links[0]).toBe('https://test.local/same');
     });
 
     it('should set metadata correctly', () => {
@@ -71,8 +71,8 @@ https://test.local/same
       
       expect(result.url).toBe(testUrl);
       expect(result.content).toBe(markdown.trim());
-      expect(result.metadata.contentLength).toBe(markdown.trim().length);
-      expect(result.metadata.crawledAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(result.metadata?.contentLength).toBe(markdown.trim().length);
+      expect(result.metadata?.crawledAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     });
   });
 });

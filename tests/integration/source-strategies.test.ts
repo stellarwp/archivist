@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import { readFileSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';

@@ -30,3 +30,22 @@ export function titleToFilename(title: string, url: string): string {
 export function hashFilename(url: string): string {
   return createHash('sha256').update(url).digest('hex').substring(0, 16);
 }
+
+export function generateFileName(url: string, title: string, strategy: 'url-based' | 'title-based' | 'hash-based' = 'url-based'): string {
+  let baseName: string;
+  
+  switch (strategy) {
+    case 'title-based':
+      baseName = titleToFilename(title, url);
+      break;
+    case 'hash-based':
+      baseName = hashFilename(url);
+      break;
+    case 'url-based':
+    default:
+      baseName = urlToFilename(url);
+      break;
+  }
+  
+  return `${baseName}.md`;
+}

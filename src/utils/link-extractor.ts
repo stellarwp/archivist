@@ -1,3 +1,4 @@
+import { appContainer } from '../di/container';
 import { LinkDiscoverer } from '../services/link-discoverer';
 import { DEFAULT_USER_AGENT } from '../version';
 
@@ -14,11 +15,8 @@ export async function extractLinksFromPage(options: LinkExtractionOptions): Prom
   const { url, linkSelector, includePatterns, excludePatterns, userAgent = DEFAULT_USER_AGENT, timeout = 30000 } = options;
   
   try {
-    // Create LinkDiscoverer instance
-    const linkDiscoverer = new LinkDiscoverer({
-      userAgent,
-      timeout,
-    });
+    // Get LinkDiscoverer instance from container
+    const linkDiscoverer = appContainer.resolve(LinkDiscoverer);
     
     // Ensure we have the discoverLinks method
     if (!linkDiscoverer || typeof linkDiscoverer.discoverLinks !== 'function') {

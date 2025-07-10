@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
 import { extractLinksFromPage } from '../../src/utils/link-extractor';
 import axios from 'axios';

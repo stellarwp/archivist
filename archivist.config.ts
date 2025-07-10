@@ -39,6 +39,10 @@ const ArchiveSchema = z.object({
   }),
 });
 
+// Export types
+export type SourceConfig = z.infer<typeof SourceSchema>;
+export type ArchiveConfig = z.infer<typeof ArchiveSchema>;
+
 export const ArchivistConfigSchema = z.object({
   archives: z.array(ArchiveSchema),
   crawl: z.object({

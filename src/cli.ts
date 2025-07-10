@@ -1,12 +1,16 @@
 #!/usr/bin/env bun
+import 'reflect-metadata';
 import { Command } from 'commander';
 import type { ArchivistConfig } from '../archivist.config';
 import { ArchivistConfigSchema, defaultConfig } from '../archivist.config';
-import { WebCrawler } from './crawler';
 import { existsSync } from 'fs';
 import path from 'path';
-import readline from 'readline';
 import { VERSION, DEFAULT_USER_AGENT } from './version';
+import { initializeContainer, appContainer } from './di/container';
+import { ConfigService } from './services/config.service';
+import { StateService } from './services/state.service';
+import { WebCrawlerService } from './services/web-crawler.service';
+import { LoggerService } from './services/logger.service';
 
 const program = new Command();
 
@@ -46,8 +50,13 @@ program
   .option('-d, --debug', 'Enable debug logging')
   .option('--dry-run', 'Collect and display all URLs without crawling')
   .option('--no-confirm', 'Skip confirmation prompt and proceed directly')
+  .option('--show-all-urls', 'Show all URLs instead of just the first 20')
+  .option('--save-links <path>', 'Save collected links to specified JSON file', 'collected-links.json')
   .action(async (options) => {
     try {
+      // Initialize DI container
+      initializeContainer();
+      
       let config: ArchivistConfig = defaultConfig;
 
       // Load config file if exists
@@ -95,59 +104,98 @@ program
         process.exit(1);
       }
 
-      // Always collect URLs first and show them
-      console.log(`Collecting URLs from ${config.archives.length} archive(s)...`);
+      // Initialize services with config
+      const configService = appContainer.resolve(ConfigService);
+      configService.initialize(config, configPath);
+      
+      const stateService = appContainer.resolve(StateService);
+      const webCrawler = appContainer.resolve(WebCrawlerService);
+      const logger = appContainer.resolve(LoggerService);
+
+      // Collect URLs first
+      logger.info(`Collecting URLs from ${config.archives.length} archive(s)...`);
       if (options.dryRun) {
-        console.log('(Dry run mode - no content will be fetched)');
+        logger.info('(Dry run mode - no content will be fetched)');
       }
-      console.log('');
       
-      const crawler = new WebCrawler(config);
-      const allUrls = await crawler.collectAllUrls();
+      await webCrawler.collectAllUrls();
       
-      if (allUrls.length === 0) {
-        console.log('No URLs found to crawl.');
+      // Save collected links to file
+      if (options.saveLinks) {
+        stateService.saveCollectedLinksFile(options.saveLinks);
+        logger.info(`\nCollected links saved to: ${options.saveLinks}`);
+      }
+      
+      const totalUrls = stateService.getTotalUrlCount();
+      const paginationStats = stateService.getPaginationStats();
+      
+      if (totalUrls === 0) {
+        logger.info('No URLs found to crawl.');
         return;
       }
       
-      console.log(`\nFound ${allUrls.length} URLs to crawl:`);
-      console.log('='.repeat(50));
-      
-      // Only show first 20 URLs if there are many
-      const urlsToShow = allUrls.length > 20 ? allUrls.slice(0, 20) : allUrls;
-      urlsToShow.forEach((url, index) => {
-        console.log(`${(index + 1).toString().padStart(4, ' ')}. ${url}`);
-      });
-      
-      if (allUrls.length > 20) {
-        console.log(`  ... and ${allUrls.length - 20} more URLs`);
+      // Display collected URLs
+      logger.info(`\nFound ${totalUrls} URLs to crawl:`);
+      if (paginationStats.totalPages > 0) {
+        logger.info(`(Discovered across ${paginationStats.totalPages} pagination pages)`);
       }
       
-      console.log('='.repeat(50));
+      logger.info('='.repeat(50));
+      
+      const collectedUrls = stateService.getAllCollectedUrls();
+      let urlIndex = 1;
+      let displayed = 0;
+      const maxToShow = options.showAllUrls ? Infinity : 20;
+      
+      // Show URLs grouped by source
+      for (const item of collectedUrls) {
+        if (displayed >= maxToShow) break;
+        
+        logger.info(`\nFrom ${item.sourceUrl} (${item.strategy}):`);
+        if (item.paginationPages) {
+          logger.info(`  Pages: ${item.paginationPages}`);
+        }
+        
+        for (const url of item.urls) {
+          if (displayed >= maxToShow) break;
+          console.log(`${urlIndex.toString().padStart(4)}. ${url}`);
+          urlIndex++;
+          displayed++;
+        }
+      }
+      
+      if (!options.showAllUrls && totalUrls > 20) {
+        logger.info(`\n  ... and ${totalUrls - 20} more URLs`);
+        logger.info(`  (Use --show-all-urls to see all URLs)`);
+      }
+      
+      logger.info('='.repeat(50));
+      logger.info(`\nTotal URLs to be processed: ${totalUrls}`);
+      
+      // Show summary report
+      logger.info(webCrawler.getCollectedLinksReport());
       
       // Ask for confirmation unless --no-confirm is used
       if (options.confirm !== false) {
-        console.log(`\nTotal URLs to be processed: ${allUrls.length}`);
-        console.log('─'.repeat(50));
-        console.log('[DEBUG] About to ask for confirmation...');
-        const response = await askQuestion('Do you want to proceed with the crawl? (yes/no): ');
+        logger.info('─'.repeat(50));
+        const response = await askQuestion('\nDo you want to proceed with the crawl? (yes/no): ');
         
         if (!response || !['yes', 'y'].includes(response.toLowerCase())) {
-          console.log('Crawl cancelled.');
+          logger.info('Crawl cancelled.');
           return;
         }
       }
       
       // If dry-run, stop here
       if (options.dryRun) {
-        console.log('\nDry run complete. No content was fetched.');
+        logger.info('\nDry run complete. No content was fetched.');
         return;
       }
       
-      console.log(`\nStarting crawl of ${config.archives.length} archive(s)...`);
-      await crawler.crawlAll();
+      // Start crawling
+      logger.info(`\nStarting crawl of ${config.archives.length} archive(s)...`);
+      await webCrawler.crawlAll();
       
-      console.log(`\nAll archives processed successfully!`);
     } catch (error) {
       console.error('Error:', error);
       process.exit(1);
@@ -199,6 +247,26 @@ program
     console.log('  "pure": {');
     console.log('    "apiKey": "your-api-key-here"');
     console.log('  }');
+    console.log('\nOr set the PURE_API_KEY environment variable.');
+    console.log('\nNext steps:');
+    console.log('1. Edit archivist.config.json to add your URLs');
+    console.log('2. Run: archivist crawl');
   });
 
-program.parse();
+program
+  .command('report')
+  .description('Show report of last collected URLs')
+  .option('-f, --file <path>', 'Path to collected links JSON file', 'collected-links.json')
+  .action((options) => {
+    try {
+      initializeContainer();
+      const webCrawler = appContainer.resolve(WebCrawlerService);
+      const logger = appContainer.resolve(LoggerService);
+      
+      logger.info(webCrawler.getCollectedLinksReport());
+    } catch (error) {
+      console.error('Error reading collected links:', error);
+    }
+  });
+
+program.parse(process.argv);

@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test';
 import { WebCrawler } from '../../src/crawler';
 import type { ArchivistConfig } from '../../archivist.config';

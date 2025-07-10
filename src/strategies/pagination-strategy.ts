@@ -1,9 +1,10 @@
 import { BaseStrategy } from './base-strategy';
 import type { StrategyResult } from '../types/source-strategy';
 import { LinkDiscoverer } from '../services/link-discoverer';
-import { getAxiosConfig } from '../utils/axios-config';
+import { appContainer } from '../di/container';
 import { extractLinksFromPage } from '../utils/link-extractor';
 import axios from 'axios';
+import { getAxiosConfig } from '../utils/axios-config';
 
 export class PaginationStrategy extends BaseStrategy {
   type = 'pagination';
@@ -11,8 +12,7 @@ export class PaginationStrategy extends BaseStrategy {
   
   constructor() {
     super();
-    const axiosInstance = axios.create(getAxiosConfig());
-    this.linkDiscoverer = new LinkDiscoverer(axiosInstance);
+    this.linkDiscoverer = appContainer.resolve(LinkDiscoverer);
   }
   
   async execute(sourceUrl: string, config: any): Promise<StrategyResult> {
