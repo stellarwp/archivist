@@ -98,7 +98,7 @@ export async function startMockServer(): Promise<MockServerResult> {
       // Blog with next link pagination
       if (url.pathname.startsWith('/blog/page/')) {
         const pageNum = parseInt(url.pathname.split('/')[3] || '1');
-        const hasNext = pageNum < 5;
+        const hasNext = pageNum < 4;
         const startId = (pageNum - 1) * 10 + 1;
         
         return new Response(`

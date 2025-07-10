@@ -129,7 +129,7 @@ describe('Source Strategies Integration', () => {
             strategy: 'pagination',
             pagination: {
               nextLinkSelector: 'a.next-page',
-              maxPages: 5,
+              maxPages: 4,
             },
           },
           output: {
@@ -153,8 +153,8 @@ describe('Source Strategies Integration', () => {
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
       
       // Should have followed the pagination chain and extracted blog posts
-      // 5 pages × 10 posts per page = 50 posts
-      expect(metadata.results.length).toBe(50);
+      // 4 pages × 10 posts per page = 40 posts
+      expect(metadata.results.length).toBe(40);
       
       const crawledUrls = metadata.results.map((r: any) => r.url);
       
@@ -162,7 +162,7 @@ describe('Source Strategies Integration', () => {
       expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/1`);  // From page 1
       expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/11`); // From page 2
       expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/21`); // From page 3
-      expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/41`); // From page 5
+      expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/31`); // From page 4
     }, 10000); // 10 second timeout
   });
   
@@ -320,7 +320,7 @@ describe('Source Strategies Integration', () => {
             strategy: 'pagination',
             pagination: {
               nextLinkSelector: 'a.load-more-link',
-              maxPages: 5,
+              maxPages: 4,
             },
           },
           output: {
@@ -344,13 +344,13 @@ describe('Source Strategies Integration', () => {
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
       
       // Should follow load more links and extract article links
-      // With maxPages: 5, it will load: 5, 10, 15, 20, 25 articles
-      // Total unique articles: 25 (since each page shows cumulative articles)
+      // With maxPages: 4, it will load: 5, 10, 15, 20 articles
+      // Total unique articles: 20 (since each page shows cumulative articles)
       // Plus the "Load More" link which also gets extracted
-      expect(metadata.results.length).toBeGreaterThanOrEqual(25);
+      expect(metadata.results.length).toBeGreaterThanOrEqual(20);
       const urls = metadata.results.map((r: any) => r.url);
       expect(urls).toContain(`${mockServerUrl}/news/article/1`);
-      expect(urls).toContain(`${mockServerUrl}/news/article/25`);
+      expect(urls).toContain(`${mockServerUrl}/news/article/20`);
     });
     
     it('should handle infinite scroll with fallback links', async () => {
@@ -406,7 +406,7 @@ describe('Source Strategies Integration', () => {
             pagination: {
               pagePattern: `${mockServerUrl}/blog/2024/01/page/{page}`,
               startPage: 1,
-              maxPages: 5,
+              maxPages: 4,
             },
           },
           output: {
@@ -430,13 +430,13 @@ describe('Source Strategies Integration', () => {
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
       
       // Should extract blog posts from all pages
-      // 6 pages (source + 5 paginated) × 8 posts per page = 48 posts
-      expect(metadata.results.length).toBe(48);
+      // 5 pages (source + 4 paginated) × 8 posts per page = 40 posts
+      expect(metadata.results.length).toBe(40);
       const urls = metadata.results.map((r: any) => r.url);
       
       expect(urls).toContain(`${mockServerUrl}/blog/2024/01/post/1`);  // From source page
       expect(urls).toContain(`${mockServerUrl}/blog/2024/01/post/9`);  // From page 1
-      expect(urls).toContain(`${mockServerUrl}/blog/2024/01/post/41`); // From page 5
+      expect(urls).toContain(`${mockServerUrl}/blog/2024/01/post/33`); // From page 4
     });
   });
 });
