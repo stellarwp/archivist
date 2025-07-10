@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Clean Output Directory Option**
+  - Added `--clean` flag to crawl command to remove existing output before crawling
+  - Automatically cleans each archive's output directory when flag is used
+  - Shows warning message during confirmation prompt when --clean is specified
+  - Helps ensure fresh crawls without manual directory cleanup
+
 - **Interactive Prompts with @inquirer/prompts**
   - Replaced custom input handling with professional prompts from Inquirer.js
   - Added `--interactive` flag to `init` command for guided configuration setup
