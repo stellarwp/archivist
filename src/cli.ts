@@ -8,6 +8,13 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { VERSION, DEFAULT_USER_AGENT } from './version';
 
+// Import DI container and services at the top level to ensure decorators are processed
+import { initializeContainer, appContainer } from './di/container';
+import { ConfigService } from './services/config.service';
+import { StateService } from './services/state.service';
+import { WebCrawlerService } from './services/web-crawler.service';
+import { LoggerService } from './services/logger.service';
+
 const program = new Command();
 
 program
@@ -30,13 +37,6 @@ program
   .option('--clean', 'Clean output directories before crawling')
   .action(async (options) => {
     try {
-      // Lazy load DI dependencies
-      const { initializeContainer, appContainer } = await import('./di/container');
-      const { ConfigService } = await import('./services/config.service');
-      const { StateService } = await import('./services/state.service');
-      const { WebCrawlerService } = await import('./services/web-crawler.service');
-      const { LoggerService } = await import('./services/logger.service');
-      
       // Initialize DI container
       initializeContainer();
       
@@ -199,9 +199,6 @@ program
   .description('Initialize a new archivist config file')
   .option('--interactive', 'Use interactive mode to configure the file')
   .action(async (options) => {
-    // Lazy load DI dependencies
-    const { initializeContainer } = await import('./di/container');
-    
     // Initialize DI container
     initializeContainer();
     
@@ -362,11 +359,6 @@ program
   .option('-f, --file <path>', 'Path to collected links JSON file', 'collected-links.json')
   .action(async (_options) => {
     try {
-      // Lazy load DI dependencies
-      const { initializeContainer, appContainer } = await import('./di/container');
-      const { WebCrawlerService } = await import('./services/web-crawler.service');
-      const { LoggerService } = await import('./services/logger.service');
-      
       initializeContainer();
       const webCrawler = appContainer.resolve(WebCrawlerService);
       const logger = appContainer.resolve(LoggerService);
