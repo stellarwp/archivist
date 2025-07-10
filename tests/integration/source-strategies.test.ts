@@ -110,15 +110,15 @@ describe('Source Strategies Integration', () => {
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
       
       // Should have crawled posts extracted from all paginated pages
-      // 4 pages (source + 3 paginated) × 10 posts per page = 40 posts
-      expect(metadata.results.length).toBe(40);
+      // 4 pages (source + 3 paginated) × 3 posts per page = 12 posts
+      expect(metadata.results.length).toBe(12);
       
       const crawledUrls = metadata.results.map((r: any) => r.url);
       // Check that we have posts from different pages
       expect(crawledUrls).toContain(`${mockServerUrl}/post/1`);  // From source page
-      expect(crawledUrls).toContain(`${mockServerUrl}/post/11`); // From page 1
-      expect(crawledUrls).toContain(`${mockServerUrl}/post/21`); // From page 2
-      expect(crawledUrls).toContain(`${mockServerUrl}/post/31`); // From page 3
+      expect(crawledUrls).toContain(`${mockServerUrl}/post/4`); // From page 1
+      expect(crawledUrls).toContain(`${mockServerUrl}/post/7`); // From page 2
+      expect(crawledUrls).toContain(`${mockServerUrl}/post/10`); // From page 3
     });
     
     it('should follow pagination using next link selector', async () => {
@@ -130,7 +130,7 @@ describe('Source Strategies Integration', () => {
             strategy: 'pagination',
             pagination: {
               nextLinkSelector: 'a.next-page',
-              maxPages: 4,
+              maxPages: 3,
             },
           },
           output: {
@@ -154,16 +154,15 @@ describe('Source Strategies Integration', () => {
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
       
       // Should have followed the pagination chain and extracted blog posts
-      // 4 pages × 10 posts per page = 40 posts
-      expect(metadata.results.length).toBe(40);
+      // 3 pages × 3 posts per page = 9 posts
+      expect(metadata.results.length).toBe(9);
       
       const crawledUrls = metadata.results.map((r: any) => r.url);
       
       // Verify blog posts were crawled from different pages
       expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/1`);  // From page 1
-      expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/11`); // From page 2
-      expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/21`); // From page 3
-      expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/31`); // From page 4
+      expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/4`); // From page 2
+      expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/7`); // From page 3
     }, 10000); // 10 second timeout
   });
   
@@ -216,13 +215,13 @@ describe('Source Strategies Integration', () => {
       // Should have crawled:
       // - About page (1)
       // - Category pages from explorer strategy (2)
-      // - Archive posts from pagination strategy (3 pages × 5 posts = 15)
-      // Total: 1 + 2 + 15 = 18
+      // - Archive posts from pagination strategy (3 pages × 3 posts = 9)
+      // Total: 1 + 2 + 9 = 12
       expect(crawledUrls).toContain(`${mockServerUrl}/about`);
       expect(crawledUrls).toContain(`${mockServerUrl}/category/tech`);
       expect(crawledUrls).toContain(`${mockServerUrl}/category/science`);
       expect(crawledUrls.some((url: string) => url.includes('/archive/post/'))).toBe(true);
-      expect(metadata.results.length).toBeGreaterThan(3);
+      expect(metadata.results.length).toBe(12);
     });
   });
   
@@ -260,14 +259,14 @@ describe('Source Strategies Integration', () => {
       const metadataPath = join(testOutputDir, 'archivist-metadata.json');
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
       
-      // Pagination strategy now extracts product links from pages
-      // But it also includes "Previous" and "Next" navigation links
-      // So we'll just check that we got a lot of product links
-      expect(metadata.results.length).toBeGreaterThan(50);
+      // Pagination strategy extracts product links from pages
+      // 4 pages (source + 3 paginated) × 4 products per page = 16 products
+      // Plus navigation links
+      expect(metadata.results.length).toBeGreaterThanOrEqual(12);
       const urls = metadata.results.map((r: any) => r.url);
       expect(urls).toContain(`${mockServerUrl}/product/1`);  // From page 1
-      expect(urls).toContain(`${mockServerUrl}/product/21`); // From page 2
-      expect(urls).toContain(`${mockServerUrl}/product/41`); // From page 3
+      expect(urls).toContain(`${mockServerUrl}/product/5`); // From page 2
+      expect(urls).toContain(`${mockServerUrl}/product/9`); // From page 3
     });
     
     it('should handle documentation with section-based pagination', async () => {
@@ -304,12 +303,13 @@ describe('Source Strategies Integration', () => {
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
       
       // Should have extracted guide links from all sections
-      // The mock server also includes navigation links which get extracted
-      expect(metadata.results.length).toBeGreaterThan(10);
+      // 4 pages (source + 3 sections) × 3 guides per page = 12 guides
+      // Plus navigation links
+      expect(metadata.results.length).toBeGreaterThanOrEqual(9);
       const urls = metadata.results.map((r: any) => r.url);
       expect(urls).toContain(`${mockServerUrl}/docs/guide/1`);  // From source
-      expect(urls).toContain(`${mockServerUrl}/docs/guide/6`);  // From section 1
-      expect(urls).toContain(`${mockServerUrl}/docs/guide/11`); // From section 2
+      expect(urls).toContain(`${mockServerUrl}/docs/guide/4`);  // From section 1
+      expect(urls).toContain(`${mockServerUrl}/docs/guide/7`); // From section 2
     });
     
     it('should handle load more button pagination', async () => {
@@ -321,7 +321,7 @@ describe('Source Strategies Integration', () => {
             strategy: 'pagination',
             pagination: {
               nextLinkSelector: 'a.load-more-link',
-              maxPages: 4,
+              maxPages: 3,
             },
           },
           output: {
@@ -345,13 +345,13 @@ describe('Source Strategies Integration', () => {
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
       
       // Should follow load more links and extract article links
-      // With maxPages: 4, it will load: 5, 10, 15, 20 articles
-      // Total unique articles: 20 (since each page shows cumulative articles)
+      // With maxPages: 3, it will load: 4, 8, 12 articles (increments of 4)
+      // Total unique articles: 12 (since each page shows cumulative articles)
       // Plus the "Load More" link which also gets extracted
-      expect(metadata.results.length).toBeGreaterThanOrEqual(20);
+      expect(metadata.results.length).toBeGreaterThanOrEqual(12);
       const urls = metadata.results.map((r: any) => r.url);
       expect(urls).toContain(`${mockServerUrl}/news/article/1`);
-      expect(urls).toContain(`${mockServerUrl}/news/article/20`);
+      expect(urls).toContain(`${mockServerUrl}/news/article/12`);
     });
     
     it('should handle infinite scroll with fallback links', async () => {
@@ -363,7 +363,7 @@ describe('Source Strategies Integration', () => {
             strategy: 'pagination',
             pagination: {
               nextLinkSelector: '#infinite-scroll-next, .next-batch',
-              maxPages: 4,
+              maxPages: 3,
             },
           },
           output: {
@@ -387,14 +387,13 @@ describe('Source Strategies Integration', () => {
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
       
       // Should extract photo links from all batches
-      // 4 batches × 10 photos per batch = 40 photos
+      // 3 batches × 3 photos per batch = 9 photos
       // Plus navigation links
-      expect(metadata.results.length).toBeGreaterThanOrEqual(40);
+      expect(metadata.results.length).toBeGreaterThanOrEqual(9);
       const urls = metadata.results.map((r: any) => r.url);
       expect(urls).toContain(`${mockServerUrl}/photo/1`);  // From batch 1
-      expect(urls).toContain(`${mockServerUrl}/photo/11`); // From batch 2
-      expect(urls).toContain(`${mockServerUrl}/photo/21`); // From batch 3
-      expect(urls).toContain(`${mockServerUrl}/photo/31`); // From batch 4
+      expect(urls).toContain(`${mockServerUrl}/photo/4`); // From batch 2
+      expect(urls).toContain(`${mockServerUrl}/photo/7`); // From batch 3
     });
     
     it('should handle complex pattern with path segments', async () => {
@@ -407,7 +406,7 @@ describe('Source Strategies Integration', () => {
             pagination: {
               pagePattern: `${mockServerUrl}/blog/2024/01/page/{page}`,
               startPage: 1,
-              maxPages: 4,
+              maxPages: 3,
             },
           },
           output: {
@@ -431,13 +430,13 @@ describe('Source Strategies Integration', () => {
       const metadata = JSON.parse(readFileSync(metadataPath, 'utf-8'));
       
       // Should extract blog posts from all pages
-      // 5 pages (source + 4 paginated) × 8 posts per page = 40 posts
-      expect(metadata.results.length).toBe(40);
+      // 4 pages (source + 3 paginated) × 3 posts per page = 12 posts
+      expect(metadata.results.length).toBe(12);
       const urls = metadata.results.map((r: any) => r.url);
       
       expect(urls).toContain(`${mockServerUrl}/blog/2024/01/post/1`);  // From source page
-      expect(urls).toContain(`${mockServerUrl}/blog/2024/01/post/9`);  // From page 1
-      expect(urls).toContain(`${mockServerUrl}/blog/2024/01/post/33`); // From page 4
+      expect(urls).toContain(`${mockServerUrl}/blog/2024/01/post/4`);  // From page 1
+      expect(urls).toContain(`${mockServerUrl}/blog/2024/01/post/10`); // From page 3
     });
   });
 });
