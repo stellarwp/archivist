@@ -32,7 +32,7 @@
   "crawl": {
     "maxConcurrency": 3,
     "delay": 2000,
-    "userAgent": "Archivist/1.0 (Blog Archiver)",
+    "userAgent": "Archivist/0.1.0-beta.6 (Blog Archiver)",
     "timeout": 30000
   },
   "pure": {

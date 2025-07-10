@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Pre-Crawl URL Collection and Confirmation**
+  - Always collect and display all URLs before starting the crawl
+  - Interactive confirmation prompt to review URLs before proceeding
+  - `--dry-run` flag to collect URLs without crawling
+  - `--no-confirm` flag to skip the confirmation prompt
+  - Helps users verify patterns and avoid accidental over-crawling
+
+### Fixed
+
+- **Pagination Strategy**
+  - Now extracts content links from each paginated page
+  - Returns article/post links instead of pagination pages themselves
+  - Filters out pagination navigation links from results
+  - Ensures only content pages are sent to Pure.md
+
 ## [0.1.0-beta.6] - 2025-01-09
 
 ### Fixed

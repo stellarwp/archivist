@@ -40,9 +40,39 @@ export class WebCrawler {
         this.pureClient
       );
       
-      await crawler.crawl();
+      const results = await crawler.crawl();
       await crawler.save();
+      
+      console.log(`\n✅ Archive completed: ${results.length} pages processed`);
     }
+  }
+
+  async collectAllUrls(): Promise<string[]> {
+    const allUrls: string[] = [];
+    
+    for (const archive of this.config.archives) {
+      console.log(`\nCollecting URLs for archive: ${archive.name}`);
+      console.log('-'.repeat(40));
+      
+      const crawler = new ArchiveCrawler(
+        archive,
+        this.config,
+        this.pureClient
+      );
+      
+      const urls = await crawler.collectUrls();
+      allUrls.push(...urls);
+      
+      console.log(`Found ${urls.length} URLs in ${archive.name}`);
+    }
+    
+    // Remove duplicates
+    const uniqueUrls = Array.from(new Set(allUrls));
+    if (uniqueUrls.length < allUrls.length) {
+      console.log(`\nRemoved ${allUrls.length - uniqueUrls.length} duplicate URLs across archives`);
+    }
+    
+    return uniqueUrls;
   }
 }
 
@@ -183,7 +213,8 @@ class ArchiveCrawler {
   }
 
   private async crawlPage(url: string): Promise<void> {
-    console.log(`Crawling: ${url}`);
+    const progress = `[${this.visited.size + 1}/${this.queue.size + this.visited.size}]`;
+    console.log(`${progress} Crawling: ${url}`);
     
     // Add delay between requests
     if (this.visited.size > 1) {
@@ -200,9 +231,10 @@ class ArchiveCrawler {
         try {
           const markdownContent = await this.pureClient.fetchContent(url);
           pageContent = parseMarkdownContent(markdownContent, url);
+          console.log(`  ✓ Content extracted successfully (${pageContent.content.length} chars)`);
         } catch (pureMdError) {
           // If Pure.md fails, just discover links with Cheerio
-          console.log(`Pure.md failed for ${url}, discovering links only`);
+          console.log(`  ⚠ Pure.md extraction failed, discovering links only`);
           const discovered = await this.linkDiscoverer.discoverLinks(url);
           
           // Create minimal page content with discovered links
@@ -219,7 +251,7 @@ class ArchiveCrawler {
         }
       } else {
         // No Pure.md API key, just discover links
-        console.log(`No Pure.md API key, discovering links only for ${url}`);
+        console.log(`  ℹ No Pure.md API key, discovering links only`);
         const discovered = await this.linkDiscoverer.discoverLinks(url);
         
         pageContent = {
@@ -324,6 +356,139 @@ class ArchiveCrawler {
     }
 
     return links.filter(link => shouldIncludeUrl(link, includePatterns, excludePatterns));
+  }
+
+  async collectUrls(): Promise<string[]> {
+    // This method simulates the full crawl process to collect all URLs
+    // without actually fetching content from Pure.md
+    
+    // Reset queues
+    this.queue = new Set();
+    this.visited = new Set();
+    this.sourceMap = new Map();
+    
+    // Normalize sources to array
+    const sources = Array.isArray(this.archive.sources) 
+      ? this.archive.sources 
+      : [this.archive.sources];
+    
+    // Process sources - some might be link collection pages
+    for (const source of sources) {
+      if (typeof source === 'string') {
+        // Simple URL - add directly to queue
+        this.queue.add(source);
+        this.sourceMap.set(source, source);
+      } else {
+        // Object source - use strategy to determine how to process
+        const strategyType = (source.strategy || 'explorer') as SourceStrategyType;
+        const strategy = StrategyFactory.getStrategy(strategyType);
+        
+        console.log(`  Collecting from ${source.url} (${strategyType} strategy)`);
+        
+        try {
+          const result = await strategy.execute(source.url, { ...source, debug: this.crawlConfig.debug });
+          
+          if (result.urls.length > 0) {
+            console.log(`  → Found ${result.urls.length} URLs`);
+            
+            // Add collected URLs to queue
+            for (const url of result.urls) {
+              this.queue.add(url);
+              // Store the source configuration for these URLs
+              if (!this.sourceMap.has(url)) {
+                this.sourceMap.set(url, source);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`  → Error collecting from ${source.url}:`, error);
+        }
+      }
+    }
+    
+    // Now simulate the crawl to handle depth traversal
+    const collectedUrls = new Set<string>();
+    const processedForDepth = new Set<string>();
+    
+    // Add all queued URLs to collected
+    for (const url of this.queue) {
+      collectedUrls.add(url);
+    }
+    
+    console.log(`  → Initial queue size: ${this.queue.size}, processing depth...`);
+    
+    // Process depth if needed (discover links from pages)
+    let iterations = 0;
+    const maxIterations = 1000; // Safety limit
+    while (this.queue.size > 0 && iterations < maxIterations) {
+      iterations++;
+      const url = this.queue.values().next().value;
+      if (!url) break;
+      
+      this.queue.delete(url);
+      
+      // Skip if already processed for depth
+      if (processedForDepth.has(url)) continue;
+      processedForDepth.add(url);
+      
+      // Find the source configuration for this URL
+      const source = this.findSourceForUrl(url);
+      const depth = this.getSourceDepth(source);
+      
+      if (depth > 0 && source) {
+        try {
+          // Add delay between requests during collection
+          if (processedForDepth.size > 1) {
+            await new Promise(resolve => setTimeout(resolve, this.crawlConfig.delay));
+          }
+          
+          console.log(`    → Discovering links from: ${url}`);
+          
+          // Discover links from this page
+          const discovered = await this.linkDiscoverer.discoverLinks(url);
+          
+          const sourceUrl = typeof source === 'string' ? source : source.url;
+          const currentDepth = this.getDepth(url, sourceUrl);
+          
+          if (currentDepth < depth) {
+            // Apply include/exclude patterns to discovered links
+            let filteredLinks = discovered.links;
+            
+            if (typeof source !== 'string' && (source.includePatterns || source.excludePatterns)) {
+              filteredLinks = this.filterLinks(
+                discovered.links, 
+                source.includePatterns,
+                source.excludePatterns
+              );
+            }
+            
+            // Add filtered links to queue and collected URLs
+            for (const link of filteredLinks) {
+              if (this.isSameDomain(link, url)) {
+                collectedUrls.add(link);
+                if (!processedForDepth.has(link)) {
+                  this.queue.add(link);
+                  // Inherit source configuration for child pages
+                  if (!this.sourceMap.has(link)) {
+                    this.sourceMap.set(link, source);
+                  }
+                }
+              }
+            }
+          }
+        } catch (error) {
+          // Ignore link discovery errors during collection
+          this.debug(`Failed to discover links from ${url}:`, error);
+        }
+      }
+    }
+    
+    if (iterations >= maxIterations) {
+      console.warn(`  ⚠ Warning: Reached max iterations limit (${maxIterations}) during URL collection`);
+    }
+    
+    console.log(`  → Collection complete: ${collectedUrls.size} URLs found`);
+    return Array.from(collectedUrls);
   }
 
   async save(): Promise<void> {

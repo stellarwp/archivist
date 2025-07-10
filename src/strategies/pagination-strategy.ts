@@ -2,6 +2,7 @@ import { BaseStrategy } from './base-strategy';
 import type { StrategyResult } from '../types/source-strategy';
 import { LinkDiscoverer } from '../services/link-discoverer';
 import { getAxiosConfig } from '../utils/axios-config';
+import { extractLinksFromPage } from '../utils/link-extractor';
 import axios from 'axios';
 
 export class PaginationStrategy extends BaseStrategy {
@@ -16,19 +17,25 @@ export class PaginationStrategy extends BaseStrategy {
   
   async execute(sourceUrl: string, config: any): Promise<StrategyResult> {
     const pagination = config.pagination || {};
-    const urls: string[] = [];
+    const pageUrls: string[] = [];
+    const allExtractedLinks = new Set<string>();
+    
+    // Initialize the set to track pagination URLs
+    this.collectedPageUrls = new Set<string>();
     
     this.debug(config, `Starting pagination for ${sourceUrl}`);
     this.debug(config, `Pagination config:`, JSON.stringify(pagination));
     
-    // Add the source URL itself to the results
-    urls.push(sourceUrl);
+    // First, collect all paginated pages including the source URL
+    pageUrls.push(sourceUrl);
+    this.collectedPageUrls.add(sourceUrl);
     
     // Check if pagination config is completely empty
     if (!pagination || Object.keys(pagination).length === 0) {
-      // No pagination configured, return just the source URL
-      this.debug(config, `No pagination config, returning source URL only`);
-      return { urls };
+      // No pagination configured, still extract links from source URL
+      this.debug(config, `No pagination config, extracting links from source URL only`);
+      const links = await this.extractLinksFromPage(sourceUrl, config);
+      return { urls: links };
     }
     
     // If using pattern-based pagination
@@ -47,8 +54,9 @@ export class PaginationStrategy extends BaseStrategy {
           // Check if the page exists before adding it
           const exists = await this.checkPageExists(pageUrl);
           if (exists) {
-            this.debug(config, `Page ${page} exists, adding to URLs`);
-            urls.push(pageUrl);
+            this.debug(config, `Page ${page} exists, adding to page URLs`);
+            pageUrls.push(pageUrl);
+            this.collectedPageUrls!.add(pageUrl);
           } else {
             // Page doesn't exist, assume pagination ended
             this.debug(config, `Page ${page} returned 404, stopping pagination`);
@@ -57,12 +65,10 @@ export class PaginationStrategy extends BaseStrategy {
           }
         }
       }
-      
-      return { urls };
     }
     
     // If using page parameter without pattern (but not if nextLinkSelector is specified)
-    if ((pagination.pageParam || pagination.maxPages) && !pagination.nextLinkSelector) {
+    else if ((pagination.pageParam || pagination.maxPages) && !pagination.nextLinkSelector && !pagination.pagePattern) {
       const startPage = pagination.startPage || 1;
       const maxPages = pagination.maxPages || 10;
       const pageParam = pagination.pageParam || 'page';
@@ -73,7 +79,8 @@ export class PaginationStrategy extends BaseStrategy {
           // Check if the page exists before adding it
           const exists = await this.checkPageExists(pageUrl);
           if (exists) {
-            urls.push(pageUrl);
+            pageUrls.push(pageUrl);
+            this.collectedPageUrls!.add(pageUrl);
           } else {
             // Page doesn't exist, assume pagination ended
             console.log(`Pagination ended at page ${page - 1} (404 on ${pageUrl})`);
@@ -81,12 +88,10 @@ export class PaginationStrategy extends BaseStrategy {
           }
         }
       }
-      
-      return { urls };
     }
     
     // If using next link selector-based pagination
-    if (pagination.nextLinkSelector) {
+    else if (pagination.nextLinkSelector) {
       let currentUrl = sourceUrl;
       const maxPages = pagination.maxPages || 50;
       const visitedUrls = new Set<string>([sourceUrl]);
@@ -94,7 +99,7 @@ export class PaginationStrategy extends BaseStrategy {
       this.debug(config, `Using next link selector: ${pagination.nextLinkSelector}`);
       this.debug(config, `Max pages for next link following: ${maxPages}`);
       
-      while (urls.length < maxPages) {
+      while (pageUrls.length < maxPages) {
         try {
           const links = await this.linkDiscoverer.discover(currentUrl, pagination.nextLinkSelector);
           
@@ -116,8 +121,9 @@ export class PaginationStrategy extends BaseStrategy {
             break;
           }
           
-          urls.push(nextUrl);
+          pageUrls.push(nextUrl);
           visitedUrls.add(nextUrl);
+          this.collectedPageUrls!.add(nextUrl);
           currentUrl = nextUrl;
           
         } catch (error) {
@@ -125,14 +131,58 @@ export class PaginationStrategy extends BaseStrategy {
           break;
         }
       }
-      
-      return { urls };
     }
     
-    // Default: just return the source URL
-    this.debug(config, `Pagination complete. Found ${urls.length} total URLs`);
-    return { urls: [sourceUrl] };
+    // Now extract links from all paginated pages
+    this.debug(config, `Found ${pageUrls.length} paginated pages, extracting links from each...`);
+    console.log(`  📄 Processing ${pageUrls.length} paginated pages...`);
+    
+    for (let i = 0; i < pageUrls.length; i++) {
+      const pageUrl = pageUrls[i];
+      if (!pageUrl) continue;
+      
+      try {
+        console.log(`    [${i + 1}/${pageUrls.length}] Extracting links from: ${pageUrl}`);
+        this.debug(config, `Extracting links from page: ${pageUrl}`);
+        const links = await this.extractLinksFromPage(pageUrl, config);
+        this.debug(config, `Found ${links.length} links on ${pageUrl}`);
+        if (links.length > 0) {
+          console.log(`    ✓ Found ${links.length} links`);
+        }
+        
+        // Add all extracted links to the set (deduplication)
+        links.forEach(link => allExtractedLinks.add(link));
+      } catch (error) {
+        console.error(`Error extracting links from ${pageUrl}:`, error);
+      }
+    }
+    
+    this.debug(config, `Pagination complete. Found ${allExtractedLinks.size} total unique links from ${pageUrls.length} pages`);
+    console.log(`  ✓ Pagination complete: ${allExtractedLinks.size} unique links collected`);
+    return { urls: Array.from(allExtractedLinks) };
   }
+  
+  private async extractLinksFromPage(url: string, config: any): Promise<string[]> {
+    const allLinks = await extractLinksFromPage({
+      url,
+      linkSelector: config.linkSelector || 'a[href]',
+      includePatterns: config.includePatterns,
+      excludePatterns: config.excludePatterns,
+      userAgent: config.userAgent,
+      timeout: config.timeout,
+    });
+    
+    // Filter out pagination links - only exclude exact matches to our collected pagination URLs
+    return allLinks.filter(link => {
+      // Check if it's one of our collected page URLs
+      if (this.collectedPageUrls && this.collectedPageUrls.has(link)) {
+        return false;
+      }
+      return true;
+    });
+  }
+  
+  private collectedPageUrls?: Set<string>;
   
   private buildPageUrl(baseUrl: string, pattern: string, pageParam: string, pageNumber: number): string {
     // Handle pattern-based URLs like "example.com/page/{page}"

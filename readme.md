@@ -163,7 +163,7 @@ archivist crawl
   "crawl": {
     "maxConcurrency": 3,
     "delay": 1000,
-    "userAgent": "Archivist/1.0",
+    "userAgent": "Archivist/0.1.0-beta.6",
     "timeout": 30000
   },
   "pure": {
@@ -310,7 +310,7 @@ For more complete examples, check out the [examples directory](./examples/).
   "crawl": {
     "maxConcurrency": 3,
     "delay": 2000,
-    "userAgent": "Archivist/1.0"
+    "userAgent": "Archivist/0.1.0-beta.6"
   },
   "pure": {
     "apiKey": "your-api-key"
@@ -869,6 +869,41 @@ Use when pages have "Next" or "Older Posts" links:
 
 ## CLI Reference
 
+### Pre-Crawl Confirmation
+
+As of v0.1.0-beta.7, Archivist will always collect and display all URLs before crawling, giving you a chance to review and confirm. This includes:
+- Executing all pagination strategies to discover paginated pages
+- Following depth settings to discover linked content
+- Applying include/exclude patterns
+- Showing the complete list of URLs that will be processed
+
+```
+Collecting URLs from 1 archive(s)...
+
+Collecting URLs for archive: Tech Blog Archive
+----------------------------------------
+  Collecting from https://techblog.example.com (pagination strategy)
+  → Found 150 URLs
+
+Found 150 URLs to crawl:
+==================================================
+   1. https://techblog.example.com/post/1
+   2. https://techblog.example.com/post/2
+   ...
+ 150. https://techblog.example.com/post/150
+==================================================
+
+Total URLs to be processed: 150
+
+Do you want to proceed with the crawl? (yes/no): 
+```
+
+This helps you:
+- Verify the correct URLs are being targeted
+- Avoid accidentally crawling too many pages
+- Check that your patterns and strategies are working correctly
+- Cancel if something looks wrong
+
 ### Commands
 
 ```bash
@@ -889,6 +924,15 @@ archivist crawl --format json
 
 # Provide Pure.md API key via CLI
 archivist crawl --pure-key your_key_here
+
+# Enable debug logging
+archivist crawl --debug
+
+# Dry run - only collect and display URLs without crawling
+archivist crawl --dry-run
+
+# Skip confirmation prompt
+archivist crawl --no-confirm
 ```
 
 ## Output Formats

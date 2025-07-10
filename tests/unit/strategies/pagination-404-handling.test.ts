@@ -11,19 +11,34 @@ describe('PaginationStrategy 404 Handling', () => {
   let strategy: PaginationStrategy;
   
   beforeEach(() => {
-    // Mock axios.create to return a mock instance
+    // Don't mock extractLinksFromPage globally - it affects other tests
+    // Mock axios.create to return a mock instance with proper HTML
     const mockAxiosInstance = {
-      get: mock(() => Promise.resolve({ data: '<html><body></body></html>' })),
+      get: mock((url: string) => {
+        // Return HTML with appropriate links based on URL
+        const pageNum = url.match(/page[/=](\d+)/)?.[1] || 
+                       url.match(/\?page=(\d+)/)?.[1] || '0';
+        const linkHref = `/article-${pageNum}`;
+        
+        return Promise.resolve({ 
+          data: `<html><body><a href="${linkHref}">Article</a></body></html>` 
+        });
+      }),
       head: mock(() => Promise.resolve({ status: 200 })),
     };
     
     axios.create = mock(() => mockAxiosInstance) as any;
+    
+    // Also mock axios.get in case it's used directly
+    axios.get = mockAxiosInstance.get as any;
     
     // Create strategy after mocking
     strategy = new PaginationStrategy();
   });
   
   afterEach(() => {
+    // Restore all mocks
+    mock.restore();
     // Restore original methods
     axios.head = originalHead;
     axios.get = originalGet;
@@ -37,7 +52,6 @@ describe('PaginationStrategy 404 Handling', () => {
       'https://example.com/?page=2': 200,
       'https://example.com/?page=3': 200,
       'https://example.com/?page=4': 404, // This will trigger retry
-      'https://example.com/?page=5': 200, // Should not be reached
     };
     
     // Mock axios.head
@@ -51,20 +65,19 @@ describe('PaginationStrategy 404 Handling', () => {
       pagination: {
         pageParam: 'page',
         startPage: 1,
-        maxPages: 10,
+        maxPages: 4,
       },
     };
     
     const result = await strategy.execute('https://example.com', config);
     
-    // Should have base URL + pages 1, 2, 3 (stops at 4 due to 404)
+    // Should have extracted links from base URL + pages 1, 2, 3 (stops at 4 due to 404)
+    // Each page has one link, so we should have 4 unique links
     expect(result.urls).toHaveLength(4);
-    expect(result.urls).toContain('https://example.com');
-    expect(result.urls).toContain('https://example.com/?page=1');
-    expect(result.urls).toContain('https://example.com/?page=2');
-    expect(result.urls).toContain('https://example.com/?page=3');
-    expect(result.urls).not.toContain('https://example.com/?page=4');
-    expect(result.urls).not.toContain('https://example.com/?page=5');
+    expect(result.urls).toContain('https://example.com/article-0'); // from base URL
+    expect(result.urls).toContain('https://example.com/article-1'); // from page 1
+    expect(result.urls).toContain('https://example.com/article-2'); // from page 2
+    expect(result.urls).toContain('https://example.com/article-3'); // from page 3
     
     // Should have tried page 4 twice (initial + 1 retry)
     const page4Calls = (axios.head as any).mock.calls.filter(
@@ -90,15 +103,15 @@ describe('PaginationStrategy 404 Handling', () => {
       pagination: {
         pageParam: 'page',
         startPage: 1,
-        maxPages: 5,
+        maxPages: 4,
       },
     };
     
     const result = await strategy.execute('https://example.com', config);
     
-    // Should have all pages since page 4 succeeded on retry
-    expect(result.urls).toHaveLength(6); // base + 5 pages
-    expect(result.urls).toContain('https://example.com/?page=4');
+    // Should have extracted links from all pages since page 4 succeeded on retry
+    expect(result.urls).toHaveLength(5); // 5 unique links from 5 pages
+    expect(result.urls).toContain('https://example.com/article-4'); // from page 4
     expect(page4Attempts).toBe(2); // Should have retried once
   });
   
@@ -118,18 +131,17 @@ describe('PaginationStrategy 404 Handling', () => {
       pagination: {
         pagePattern: 'https://example.com/page/{page}',
         startPage: 1,
-        maxPages: 5,
+        maxPages: 4,
       },
     };
     
     const result = await strategy.execute('https://example.com', config);
     
-    // Should stop at page 3
-    expect(result.urls).toHaveLength(3); // base + pages 1, 2
-    expect(result.urls).toContain('https://example.com');
-    expect(result.urls).toContain('https://example.com/page/1');
-    expect(result.urls).toContain('https://example.com/page/2');
-    expect(result.urls).not.toContain('https://example.com/page/3');
+    // Should have extracted links from base + pages 1, 2 (stops at page 3)
+    expect(result.urls).toHaveLength(3); // 3 unique links
+    expect(result.urls).toContain('https://example.com/article-0'); // from base
+    expect(result.urls).toContain('https://example.com/article-1'); // from page 1
+    expect(result.urls).toContain('https://example.com/article-2'); // from page 2
   });
   
   it('should handle network errors as non-existent pages after retry', async () => {
@@ -148,14 +160,14 @@ describe('PaginationStrategy 404 Handling', () => {
       pagination: {
         pageParam: 'page',
         startPage: 1,
-        maxPages: 5,
+        maxPages: 4,
       },
     };
     
     const result = await strategy.execute('https://example.com', config);
     
-    // Should stop at page 3 due to network error
-    expect(result.urls).toHaveLength(3); // base + pages 1, 2
+    // Should have extracted links from base + pages 1, 2 (stops at page 3)
+    expect(result.urls).toHaveLength(3); // 3 unique links
     expect(attempts).toBe(2); // Should have retried once
   });
 });

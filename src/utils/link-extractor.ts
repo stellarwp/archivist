@@ -1,4 +1,5 @@
 import { LinkDiscoverer } from '../services/link-discoverer';
+import { DEFAULT_USER_AGENT } from '../version';
 
 export interface LinkExtractionOptions {
   url: string;
@@ -10,7 +11,7 @@ export interface LinkExtractionOptions {
 }
 
 export async function extractLinksFromPage(options: LinkExtractionOptions): Promise<string[]> {
-  const { url, linkSelector, includePatterns, excludePatterns, userAgent = 'Archivist/1.0', timeout = 30000 } = options;
+  const { url, linkSelector, includePatterns, excludePatterns, userAgent = DEFAULT_USER_AGENT, timeout = 30000 } = options;
   
   try {
     // Create LinkDiscoverer instance

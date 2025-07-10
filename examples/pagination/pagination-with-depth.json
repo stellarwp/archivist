@@ -1,0 +1,38 @@
+{
+  "archives": [
+    {
+      "name": "Blog with Pagination and Link Extraction",
+      "sources": {
+        "url": "https://example.com/blog",
+        "strategy": "pagination",
+        "depth": 1,
+        "includePatterns": [
+          "*/blog/*",
+          "*/post/*",
+          "*/article/*"
+        ],
+        "excludePatterns": [
+          "*/tag/*",
+          "*/category/*",
+          "*/author/*"
+        ],
+        "pagination": {
+          "pagePattern": "https://example.com/blog/page/{page}",
+          "startPage": 1,
+          "maxPages": 5
+        }
+      },
+      "output": {
+        "directory": "./archive/blog-with-links",
+        "format": "markdown",
+        "fileNaming": "url-based"
+      }
+    }
+  ],
+  "crawl": {
+    "maxConcurrency": 3,
+    "delay": 1000,
+    "userAgent": "Archivist/0.1.0-beta.6",
+    "timeout": 30000
+  }
+}

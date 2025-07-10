@@ -5,13 +5,36 @@ import { ArchivistConfigSchema, defaultConfig } from '../archivist.config';
 import { WebCrawler } from './crawler';
 import { existsSync } from 'fs';
 import path from 'path';
+import readline from 'readline';
+import { VERSION, DEFAULT_USER_AGENT } from './version';
 
 const program = new Command();
+
+// Helper function for user input
+async function askQuestion(question: string): Promise<string> {
+  process.stdout.write(question);
+  
+  // Use Bun's stdin
+  const decoder = new TextDecoder();
+  const reader = Bun.stdin.stream().getReader();
+  
+  try {
+    const { value } = await reader.read();
+    reader.releaseLock();
+    if (value) {
+      return decoder.decode(value).trim();
+    }
+  } catch (error) {
+    console.error('[DEBUG] Error reading input:', error);
+  }
+  
+  return '';
+}
 
 program
   .name('archivist')
   .description('Archive web content for LLM context')
-  .version('0.1.0-beta.6');
+  .version(VERSION);
 
 program
   .command('crawl')
@@ -21,6 +44,8 @@ program
   .option('-f, --format <format>', 'Output format (markdown, html, json)')
   .option('--pure-key <key>', 'Pure.md API key')
   .option('-d, --debug', 'Enable debug logging')
+  .option('--dry-run', 'Collect and display all URLs without crawling')
+  .option('--no-confirm', 'Skip confirmation prompt and proceed directly')
   .action(async (options) => {
     try {
       let config: ArchivistConfig = defaultConfig;
@@ -70,9 +95,56 @@ program
         process.exit(1);
       }
 
-      console.log(`Starting crawl of ${config.archives.length} archive(s)...`);
+      // Always collect URLs first and show them
+      console.log(`Collecting URLs from ${config.archives.length} archive(s)...`);
+      if (options.dryRun) {
+        console.log('(Dry run mode - no content will be fetched)');
+      }
+      console.log('');
       
       const crawler = new WebCrawler(config);
+      const allUrls = await crawler.collectAllUrls();
+      
+      if (allUrls.length === 0) {
+        console.log('No URLs found to crawl.');
+        return;
+      }
+      
+      console.log(`\nFound ${allUrls.length} URLs to crawl:`);
+      console.log('='.repeat(50));
+      
+      // Only show first 20 URLs if there are many
+      const urlsToShow = allUrls.length > 20 ? allUrls.slice(0, 20) : allUrls;
+      urlsToShow.forEach((url, index) => {
+        console.log(`${(index + 1).toString().padStart(4, ' ')}. ${url}`);
+      });
+      
+      if (allUrls.length > 20) {
+        console.log(`  ... and ${allUrls.length - 20} more URLs`);
+      }
+      
+      console.log('='.repeat(50));
+      
+      // Ask for confirmation unless --no-confirm is used
+      if (options.confirm !== false) {
+        console.log(`\nTotal URLs to be processed: ${allUrls.length}`);
+        console.log('─'.repeat(50));
+        console.log('[DEBUG] About to ask for confirmation...');
+        const response = await askQuestion('Do you want to proceed with the crawl? (yes/no): ');
+        
+        if (!response || !['yes', 'y'].includes(response.toLowerCase())) {
+          console.log('Crawl cancelled.');
+          return;
+        }
+      }
+      
+      // If dry-run, stop here
+      if (options.dryRun) {
+        console.log('\nDry run complete. No content was fetched.');
+        return;
+      }
+      
+      console.log(`\nStarting crawl of ${config.archives.length} archive(s)...`);
       await crawler.crawlAll();
       
       console.log(`\nAll archives processed successfully!`);
@@ -116,7 +188,7 @@ program
       crawl: {
         maxConcurrency: 3,
         delay: 1000,
-        userAgent: 'Archivist/1.0',
+        userAgent: DEFAULT_USER_AGENT,
         timeout: 30000
       }
     };

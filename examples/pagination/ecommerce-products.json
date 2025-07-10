@@ -38,7 +38,7 @@
   "crawl": {
     "maxConcurrency": 2,
     "delay": 3000,
-    "userAgent": "Archivist/1.0 (Product Crawler)",
+    "userAgent": "Archivist/0.1.0-beta.6 (Product Crawler)",
     "timeout": 45000
   }
 }

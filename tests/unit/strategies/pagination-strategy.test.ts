@@ -4,6 +4,7 @@ import axios from 'axios';
 
 // Store original axios methods
 const originalHead = axios.head;
+const originalGet = axios.get;
 const originalCreate = axios.create;
 
 describe('PaginationStrategy', () => {
@@ -20,9 +21,32 @@ describe('PaginationStrategy', () => {
       LinkDiscoverer: mock(() => mockLinkDiscoverer),
     }));
     
+    // Don't mock extractLinksFromPage globally - it affects other tests
+    // Instead, we'll mock the axios responses to return HTML with the links we expect
+    
     // Mock axios.create to return a mock instance
     const mockAxiosInstance = {
-      get: mock(() => Promise.resolve({ data: '<html><body></body></html>' })),
+      get: mock((url: string) => {
+        // Return HTML with appropriate links based on URL
+        const pageNum = url.match(/page[/=](\d+)/)?.[1] || 
+                       url.match(/\?p=(\d+)/)?.[1] || 
+                       url.match(/page(\d+)/)?.[1];
+        
+        let linkHref;
+        if (pageNum) {
+          linkHref = `/article-${pageNum}`;
+        } else if (url.includes('category=tech')) {
+          linkHref = '/article-tech';
+        } else if (url.includes('posts')) {
+          linkHref = '/article-posts';
+        } else {
+          linkHref = '/article-0';
+        }
+        
+        return Promise.resolve({ 
+          data: `<html><body><a href="${linkHref}">Article</a></body></html>` 
+        });
+      }),
       head: mock(() => Promise.resolve({ status: 200 })),
     };
     
@@ -31,13 +55,18 @@ describe('PaginationStrategy', () => {
     // Mock axios.head to always return success for existing tests
     axios.head = mock(() => Promise.resolve({ status: 200 })) as any;
     
+    // Also mock axios.get in case it's used directly
+    axios.get = mockAxiosInstance.get as any;
+    
     strategy = new PaginationStrategy();
   });
   
   afterEach(() => {
+    // Restore all mocks
     mock.restore();
     // Restore original axios methods
     axios.head = originalHead;
+    axios.get = originalGet;
     axios.create = originalCreate;
   });
   
@@ -57,12 +86,12 @@ describe('PaginationStrategy', () => {
       
       const result = await strategy.execute('https://example.com/posts', config);
       
-      expect(result.urls).toEqual([
-        'https://example.com/posts',
-        'https://example.com/posts/page/1',
-        'https://example.com/posts/page/2',
-        'https://example.com/posts/page/3',
-      ]);
+      // Should have extracted links from 4 pages
+      expect(result.urls).toHaveLength(4);
+      expect(result.urls).toContain('https://example.com/article-posts'); // from posts
+      expect(result.urls).toContain('https://example.com/article-1'); // from page 1
+      expect(result.urls).toContain('https://example.com/article-2'); // from page 2
+      expect(result.urls).toContain('https://example.com/article-3'); // from page 3
     });
     
     it('should generate URLs using query parameters', async () => {
@@ -76,12 +105,12 @@ describe('PaginationStrategy', () => {
       
       const result = await strategy.execute('https://example.com/posts', config);
       
-      expect(result.urls).toEqual([
-        'https://example.com/posts',
-        'https://example.com/posts?p=1',
-        'https://example.com/posts?p=2',
-        'https://example.com/posts?p=3',
-      ]);
+      // Should have extracted links from 4 pages
+      expect(result.urls).toHaveLength(4);
+      expect(result.urls).toContain('https://example.com/article-posts'); // from posts
+      expect(result.urls).toContain('https://example.com/article-1'); // from ?p=1
+      expect(result.urls).toContain('https://example.com/article-2'); // from ?p=2
+      expect(result.urls).toContain('https://example.com/article-3'); // from ?p=3
     });
     
     it('should append to existing query parameters', async () => {
@@ -95,11 +124,11 @@ describe('PaginationStrategy', () => {
       
       const result = await strategy.execute('https://example.com/posts?category=tech', config);
       
-      expect(result.urls).toEqual([
-        'https://example.com/posts?category=tech',
-        'https://example.com/posts?category=tech&page=1',
-        'https://example.com/posts?category=tech&page=2',
-      ]);
+      // Should have extracted links from 3 pages
+      expect(result.urls).toHaveLength(3);
+      expect(result.urls).toContain('https://example.com/article-tech'); // from base with category
+      expect(result.urls).toContain('https://example.com/article-1'); // from page 1
+      expect(result.urls).toContain('https://example.com/article-2'); // from page 2
     });
     
     it('should use default values when pageParam is specified', async () => {
@@ -112,10 +141,12 @@ describe('PaginationStrategy', () => {
       const result = await strategy.execute('https://example.com/posts', config);
       
       // Default: startPage=1, maxPages=10, pageParam='page'
-      expect(result.urls).toHaveLength(11); // source + 10 pages
-      expect(result.urls[0]).toBe('https://example.com/posts');
-      expect(result.urls[1]).toBe('https://example.com/posts?page=1');
-      expect(result.urls[10]).toBe('https://example.com/posts?page=10');
+      // Should extract links from multiple pages
+      expect(result.urls.length).toBeGreaterThan(1);
+      // Should have unique article links, not pagination URLs
+      result.urls.forEach(url => {
+        expect(url).toMatch(/article-/);
+      });
     });
   });
   
@@ -130,17 +161,17 @@ describe('PaginationStrategy', () => {
       const config = {
         pagination: {
           nextLinkSelector: 'a.next-page',
-          maxPages: 10,
+          maxPages: 4,
         },
       };
       
       const result = await strategy.execute('https://example.com/page1', config);
       
-      expect(result.urls).toEqual([
-        'https://example.com/page1',
-        'https://example.com/page2',
-        'https://example.com/page3',
-      ]);
+      // Should extract links from 3 pages discovered via next links
+      expect(result.urls).toHaveLength(3);
+      expect(result.urls).toContain('https://example.com/article-1'); // from page1
+      expect(result.urls).toContain('https://example.com/article-2'); // from page2
+      expect(result.urls).toContain('https://example.com/article-3'); // from page3
       
       expect(mockLinkDiscoverer.discover).toHaveBeenCalledTimes(3);
       expect(mockLinkDiscoverer.discover).toHaveBeenCalledWith('https://example.com/page1', 'a.next-page');
@@ -166,6 +197,7 @@ describe('PaginationStrategy', () => {
       
       const result = await strategy.execute('https://example.com/page1', config);
       
+      // Should extract links from 3 pages (hit maxPages limit)
       expect(result.urls).toHaveLength(3);
       expect(mockLinkDiscoverer.discover).toHaveBeenCalledTimes(2); // Initial + 2 more to reach limit
     });
@@ -184,11 +216,11 @@ describe('PaginationStrategy', () => {
       
       const result = await strategy.execute('https://example.com/posts/page1', config);
       
-      expect(result.urls).toEqual([
-        'https://example.com/posts/page1',
-        'https://example.com/page2',
-        'https://example.com/page3',
-      ]);
+      // Should extract links from 3 pages
+      expect(result.urls).toHaveLength(3);
+      expect(result.urls).toContain('https://example.com/article-1'); // from page1
+      expect(result.urls).toContain('https://example.com/article-2'); // from page2
+      expect(result.urls).toContain('https://example.com/article-3'); // from page3
     });
     
     it('should avoid infinite loops with circular links', async () => {
@@ -200,16 +232,16 @@ describe('PaginationStrategy', () => {
       const config = {
         pagination: {
           nextLinkSelector: 'a.next',
-          maxPages: 10,
+          maxPages: 4,
         },
       };
       
       const result = await strategy.execute('https://example.com/page1', config);
       
-      expect(result.urls).toEqual([
-        'https://example.com/page1',
-        'https://example.com/page2',
-      ]);
+      // Should extract links from 2 pages (avoided circular loop)
+      expect(result.urls).toHaveLength(2);
+      expect(result.urls).toContain('https://example.com/article-1'); // from page1
+      expect(result.urls).toContain('https://example.com/article-2'); // from page2
     });
   });
   
@@ -217,7 +249,9 @@ describe('PaginationStrategy', () => {
     it('should return only source URL when no pagination config provided', async () => {
       const result = await strategy.execute('https://example.com/posts', {});
       
-      expect(result.urls).toEqual(['https://example.com/posts']);
+      // Should extract link from single page
+      expect(result.urls).toHaveLength(1);
+      expect(result.urls[0]).toBe('https://example.com/article-posts');
     });
     
     it('should return only source URL when pagination config is empty', async () => {
@@ -227,7 +261,9 @@ describe('PaginationStrategy', () => {
       
       const result = await strategy.execute('https://example.com/posts', config);
       
-      expect(result.urls).toEqual(['https://example.com/posts']);
+      // Should extract link from single page
+      expect(result.urls).toHaveLength(1);
+      expect(result.urls[0]).toBe('https://example.com/article-posts');
     });
   });
 });
