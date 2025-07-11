@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
+import { describe, expect, it, beforeEach, afterEach, spyOn } from 'bun:test';
 import { readFileSync, rmSync, existsSync } from 'fs';
 import { join } from 'path';
 import { WebCrawler } from '../../src/crawler';
@@ -9,6 +9,7 @@ import type { ArchivistConfig } from '../../archivist.config';
 describe('Source Strategies Integration', () => {
   let mockServerUrl: string;
   let stopServer: () => void;
+  let consoleErrorSpy: any;
   const testOutputDir = join(__dirname, '../test-output');
   
   beforeEach(async () => {
@@ -21,6 +22,9 @@ describe('Source Strategies Integration', () => {
     if (existsSync(testOutputDir)) {
       rmSync(testOutputDir, { recursive: true, force: true });
     }
+    
+    // Suppress console.error for expected 404 errors
+    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => {});
   });
   
   afterEach(() => {
@@ -29,6 +33,8 @@ describe('Source Strategies Integration', () => {
     if (existsSync(testOutputDir)) {
       rmSync(testOutputDir, { recursive: true, force: true });
     }
+    // Restore console.error
+    consoleErrorSpy?.mockRestore();
   });
   
   describe('Explorer Strategy', () => {
