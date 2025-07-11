@@ -33,7 +33,6 @@ program
   .option('--dry-run', 'Collect and display all URLs without crawling')
   .option('--no-confirm', 'Skip confirmation prompt and proceed directly')
   .option('--show-all-urls', 'Show all URLs instead of just the first 20')
-  .option('--save-links <path>', 'Save collected links to specified JSON file', 'collected-links.json')
   .option('--clean', 'Clean output directories before crawling')
   .action(async (options) => {
     try {
@@ -103,11 +102,12 @@ program
       
       await webCrawler.collectAllUrls();
       
-      // Save collected links to file
-      if (options.saveLinks) {
-        stateService.saveCollectedLinksFile(options.saveLinks);
-        logger.info(`\nCollected links saved to: ${options.saveLinks}`);
+      // Save collected links to each archive's output directory
+      for (const archive of config.archives) {
+        const collectedLinksPath = path.join(archive.output.directory, 'collected-links.json');
+        stateService.saveArchiveCollectedLinks(archive.name, collectedLinksPath);
       }
+      logger.info(`\nCollected links saved to each archive's output directory`);
       
       const totalUrls = stateService.getTotalUrlCount();
       const paginationStats = stateService.getPaginationStats();

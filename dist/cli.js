@@ -45629,6 +45629,35 @@ class StateService {
     };
     writeFileSync(outputPath, JSON.stringify(linksData, null, 2));
   }
+  saveArchiveCollectedLinks(archiveName, outputPath) {
+    const archiveUrls = this.state.collectedUrls.filter((item) => item.archiveName === archiveName);
+    if (archiveUrls.length === 0) {
+      return;
+    }
+    const totalUrls = archiveUrls.reduce((sum, item) => sum + item.urls.length, 0);
+    const totalPaginationPages = archiveUrls.reduce((sum, item) => sum + (item.paginationPages || 0), 0);
+    const linksData = {
+      timestamp: new Date().toISOString(),
+      archiveName,
+      summary: {
+        totalSources: archiveUrls.length,
+        totalUrls,
+        paginationPages: totalPaginationPages
+      },
+      sources: archiveUrls.map((item) => ({
+        source: item.sourceUrl,
+        strategy: item.strategy,
+        paginationPages: item.paginationPages,
+        urlCount: item.urls.length,
+        urls: item.urls
+      }))
+    };
+    const dir = join(outputPath, "..");
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    writeFileSync(outputPath, JSON.stringify(linksData, null, 2));
+  }
   addToQueue(archiveName, url) {
     const state = this.getArchiveState(archiveName);
     if (state && !state.queue.includes(url) && !state.visited.includes(url)) {
@@ -46618,7 +46647,7 @@ ArchiveCrawlerService = __legacyDecorateClassTS([
 ], ArchiveCrawlerService);
 
 // src/services/web-crawler.service.ts
-import { readFileSync as readFileSync2 } from "fs";
+import { join as join3 } from "path";
 class WebCrawlerService {
   configService;
   stateService;
@@ -46712,6 +46741,8 @@ Total URLs to be processed: ${totalUrls}`);
       for (const url2 of urls) {
         this.stateService.addToQueue(archive.name, url2);
       }
+      const collectedLinksPath = join3(archive.output.directory, "collected-links.json");
+      this.stateService.saveArchiveCollectedLinks(archive.name, collectedLinksPath);
       await this.archiveCrawler.crawlUrls(archive, archiveState);
       const metadataPath = await this.archiveCrawler.saveResults(archive, archiveState, { clean: options.clean });
       this.logger.info(`
@@ -46721,35 +46752,45 @@ Total URLs to be processed: ${totalUrls}`);
 \u2728 All archives completed!`);
   }
   getCollectedLinksReport() {
-    try {
-      const linksData = JSON.parse(readFileSync2("collected-links.json", "utf-8"));
-      const report = [];
-      report.push(`
+    const collectedUrls = this.stateService.getAllCollectedUrls();
+    const totalUrls = this.stateService.getTotalUrlCount();
+    const paginationStats = this.stateService.getPaginationStats();
+    const report = [];
+    report.push(`
 Collected Links Summary`);
-      report.push("=".repeat(50));
-      report.push(`Total Archives: ${linksData.summary.totalArchives}`);
-      report.push(`Total URLs: ${linksData.summary.totalUrls}`);
-      if (linksData.summary.paginationStats.totalPages > 0) {
-        report.push(`Pagination Pages: ${linksData.summary.paginationStats.totalPages}`);
-      }
-      report.push(`
-Breakdown by Archive:`);
-      report.push("-".repeat(50));
-      for (const archive of linksData.archives) {
-        report.push(`
-${archive.archive}:`);
-        report.push(`  Source: ${archive.source}`);
-        report.push(`  Strategy: ${archive.strategy}`);
-        report.push(`  URL Count: ${archive.urlCount}`);
-        if (archive.paginationPages) {
-          report.push(`  Pagination Pages: ${archive.paginationPages}`);
-        }
-      }
-      return report.join(`
-`);
-    } catch (error) {
-      return "No collected links file found.";
+    report.push("=".repeat(50));
+    report.push(`Total Archives: ${this.configService.getArchives().length}`);
+    report.push(`Total URLs: ${totalUrls}`);
+    if (paginationStats.totalPages > 0) {
+      report.push(`Pagination Pages: ${paginationStats.totalPages}`);
     }
+    report.push(`
+Breakdown by Archive:`);
+    report.push("-".repeat(50));
+    const byArchive = new Map;
+    for (const item of collectedUrls) {
+      if (!byArchive.has(item.archiveName)) {
+        byArchive.set(item.archiveName, { sources: new Set, urls: 0, paginationPages: 0 });
+      }
+      const archiveData = byArchive.get(item.archiveName);
+      archiveData.sources.add(item.sourceUrl);
+      archiveData.urls += item.urls.length;
+      archiveData.paginationPages += item.paginationPages || 0;
+    }
+    for (const [archiveName, data2] of byArchive) {
+      report.push(`
+${archiveName}:`);
+      report.push(`  Sources: ${data2.sources.size}`);
+      report.push(`  URLs found: ${data2.urls}`);
+      if (data2.paginationPages > 0) {
+        report.push(`  Pagination pages: ${data2.paginationPages}`);
+      }
+    }
+    report.push(`
+` + "-".repeat(50));
+    report.push("Collected links will be saved to each archive's output directory");
+    return report.join(`
+`);
   }
 }
 WebCrawlerService = __legacyDecorateClassTS([
@@ -46778,7 +46819,7 @@ function initializeContainer() {
 // src/cli.ts
 var program2 = new Command;
 program2.name("archivist").description("Archive web content for LLM context").version(VERSION);
-program2.command("crawl").description("Crawl and archive web content").option("-c, --config <path>", "Path to config file", "./archivist.config.json").option("-o, --output <dir>", "Output directory").option("-f, --format <format>", "Output format (markdown, html, json)").option("--pure-key <key>", "Pure.md API key").option("-d, --debug", "Enable debug logging").option("--dry-run", "Collect and display all URLs without crawling").option("--no-confirm", "Skip confirmation prompt and proceed directly").option("--show-all-urls", "Show all URLs instead of just the first 20").option("--save-links <path>", "Save collected links to specified JSON file", "collected-links.json").option("--clean", "Clean output directories before crawling").action(async (options) => {
+program2.command("crawl").description("Crawl and archive web content").option("-c, --config <path>", "Path to config file", "./archivist.config.json").option("-o, --output <dir>", "Output directory").option("-f, --format <format>", "Output format (markdown, html, json)").option("--pure-key <key>", "Pure.md API key").option("-d, --debug", "Enable debug logging").option("--dry-run", "Collect and display all URLs without crawling").option("--no-confirm", "Skip confirmation prompt and proceed directly").option("--show-all-urls", "Show all URLs instead of just the first 20").option("--clean", "Clean output directories before crawling").action(async (options) => {
   try {
     initializeContainer();
     let config = defaultConfig;
@@ -46826,11 +46867,12 @@ program2.command("crawl").description("Crawl and archive web content").option("-
       logger.info("(Dry run mode - no content will be fetched)");
     }
     await webCrawler.collectAllUrls();
-    if (options.saveLinks) {
-      stateService.saveCollectedLinksFile(options.saveLinks);
-      logger.info(`
-Collected links saved to: ${options.saveLinks}`);
+    for (const archive of config.archives) {
+      const collectedLinksPath = path2.join(archive.output.directory, "collected-links.json");
+      stateService.saveArchiveCollectedLinks(archive.name, collectedLinksPath);
     }
+    logger.info(`
+Collected links saved to each archive's output directory`);
     const totalUrls = stateService.getTotalUrlCount();
     const paginationStats = stateService.getPaginationStats();
     if (totalUrls === 0) {
