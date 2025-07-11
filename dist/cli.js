@@ -44678,6 +44678,20 @@ var USER_AGENT = `Archivist/${VERSION}`;
 var DEFAULT_USER_AGENT = USER_AGENT;
 
 // src/config/schema.ts
+var PaginationStopConditionsSchema = exports_external.object({
+  consecutiveEmptyPages: exports_external.number().min(1).default(3).optional().describe("Stop after N pages with no new links"),
+  max404Errors: exports_external.number().min(1).default(2).optional().describe("Stop after N 404 errors"),
+  errorKeywords: exports_external.array(exports_external.string()).optional().describe("Keywords indicating error pages"),
+  minNewLinksPerPage: exports_external.number().min(0).default(1).optional().describe("Minimum new links to continue")
+}).optional();
+var PaginationConfigSchema = exports_external.object({
+  startPage: exports_external.number().default(1).optional(),
+  maxPages: exports_external.number().optional(),
+  pageParam: exports_external.string().default("page").optional(),
+  pagePattern: exports_external.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
+  nextLinkSelector: exports_external.string().optional().describe("CSS selector for next page link"),
+  stopConditions: PaginationStopConditionsSchema.describe("Conditions for early pagination stopping")
+});
 var SourceSchema = exports_external.union([
   exports_external.string().url(),
   exports_external.object({
@@ -44688,13 +44702,7 @@ var SourceSchema = exports_external.union([
     includePatterns: exports_external.array(exports_external.string()).optional().describe("Regex patterns - only follow links matching these"),
     excludePatterns: exports_external.array(exports_external.string()).optional().describe("Regex patterns - exclude links matching these"),
     strategy: exports_external.enum(["explorer", "pagination"]).default("explorer").optional().describe("Source crawling strategy"),
-    pagination: exports_external.object({
-      startPage: exports_external.number().default(1).optional(),
-      maxPages: exports_external.number().optional(),
-      pageParam: exports_external.string().default("page").optional(),
-      pagePattern: exports_external.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
-      nextLinkSelector: exports_external.string().optional().describe("CSS selector for next page link")
-    }).optional().describe("Configuration for pagination strategy")
+    pagination: PaginationConfigSchema.optional().describe("Configuration for pagination strategy")
   })
 ]);
 var SourcesSchema = exports_external.union([
@@ -44717,20 +44725,6 @@ var CrawlConfigSchema = exports_external.object({
   userAgent: exports_external.string().default(DEFAULT_USER_AGENT),
   timeout: exports_external.number().min(1000).default(30000),
   debug: exports_external.boolean().default(false).optional()
-});
-var PaginationStopConditionsSchema = exports_external.object({
-  consecutiveEmptyPages: exports_external.number().min(1).default(3).optional().describe("Stop after N pages with no new links"),
-  max404Errors: exports_external.number().min(1).default(2).optional().describe("Stop after N 404 errors"),
-  errorKeywords: exports_external.array(exports_external.string()).optional().describe("Keywords indicating error pages"),
-  minNewLinksPerPage: exports_external.number().min(0).default(1).optional().describe("Minimum new links to continue")
-}).optional();
-var PaginationConfigSchema = exports_external.object({
-  startPage: exports_external.number().default(1).optional(),
-  maxPages: exports_external.number().optional(),
-  pageParam: exports_external.string().default("page").optional(),
-  pagePattern: exports_external.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
-  nextLinkSelector: exports_external.string().optional().describe("CSS selector for next page link"),
-  stopConditions: PaginationStopConditionsSchema.describe("Conditions for early pagination stopping")
 });
 var ArchivistConfigSchema = exports_external.object({
   archives: exports_external.array(ArchiveSchema),
@@ -46332,6 +46326,7 @@ class PaginationStopDetector {
           reason: `Stopping: Reached ${this.error404Count} consecutive 404 errors`
         };
       }
+      return { shouldStop: false };
     }
     if (pageContent && this.isErrorPage(pageContent)) {
       return {

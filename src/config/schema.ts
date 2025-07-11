@@ -1,6 +1,24 @@
 import { z } from 'zod';
 import { DEFAULT_USER_AGENT } from '../version';
 
+// Define pagination stop conditions first
+const PaginationStopConditionsSchema = z.object({
+  consecutiveEmptyPages: z.number().min(1).default(3).optional().describe('Stop after N pages with no new links'),
+  max404Errors: z.number().min(1).default(2).optional().describe('Stop after N 404 errors'),
+  errorKeywords: z.array(z.string()).optional().describe('Keywords indicating error pages'),
+  minNewLinksPerPage: z.number().min(0).default(1).optional().describe('Minimum new links to continue'),
+}).optional();
+
+// Define pagination config
+const PaginationConfigSchema = z.object({
+  startPage: z.number().default(1).optional(),
+  maxPages: z.number().optional(),
+  pageParam: z.string().default('page').optional(),
+  pagePattern: z.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
+  nextLinkSelector: z.string().optional().describe('CSS selector for next page link'),
+  stopConditions: PaginationStopConditionsSchema.describe('Conditions for early pagination stopping'),
+});
+
 // Single source can be a URL string or a detailed object
 const SourceSchema = z.union([
   z.string().url(),
@@ -12,13 +30,7 @@ const SourceSchema = z.union([
     includePatterns: z.array(z.string()).optional().describe('Regex patterns - only follow links matching these'),
     excludePatterns: z.array(z.string()).optional().describe('Regex patterns - exclude links matching these'),
     strategy: z.enum(['explorer', 'pagination']).default('explorer').optional().describe('Source crawling strategy'),
-    pagination: z.object({
-      startPage: z.number().default(1).optional(),
-      maxPages: z.number().optional(),
-      pageParam: z.string().default('page').optional(),
-      pagePattern: z.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
-      nextLinkSelector: z.string().optional().describe('CSS selector for next page link'),
-    }).optional().describe('Configuration for pagination strategy'),
+    pagination: PaginationConfigSchema.optional().describe('Configuration for pagination strategy'),
   })
 ]);
 
@@ -49,22 +61,6 @@ const CrawlConfigSchema = z.object({
   userAgent: z.string().default(DEFAULT_USER_AGENT),
   timeout: z.number().min(1000).default(30000),
   debug: z.boolean().default(false).optional(),
-});
-
-const PaginationStopConditionsSchema = z.object({
-  consecutiveEmptyPages: z.number().min(1).default(3).optional().describe('Stop after N pages with no new links'),
-  max404Errors: z.number().min(1).default(2).optional().describe('Stop after N 404 errors'),
-  errorKeywords: z.array(z.string()).optional().describe('Keywords indicating error pages'),
-  minNewLinksPerPage: z.number().min(0).default(1).optional().describe('Minimum new links to continue'),
-}).optional();
-
-const PaginationConfigSchema = z.object({
-  startPage: z.number().default(1).optional(),
-  maxPages: z.number().optional(),
-  pageParam: z.string().default('page').optional(),
-  pagePattern: z.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
-  nextLinkSelector: z.string().optional().describe('CSS selector for next page link'),
-  stopConditions: PaginationStopConditionsSchema.describe('Conditions for early pagination stopping'),
 });
 
 // Export types

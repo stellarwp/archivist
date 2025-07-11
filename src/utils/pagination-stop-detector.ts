@@ -75,6 +75,9 @@ export class PaginationStopDetector {
           reason: `Stopping: Reached ${this.error404Count} consecutive 404 errors`
         };
       }
+      
+      // Return early for 404s without processing further
+      return { shouldStop: false };
     }
 
     // Check for error page content
