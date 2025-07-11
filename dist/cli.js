@@ -44727,19 +44727,20 @@ var PaginationConfigSchema = exports_external.object({
 });
 var ArchivistConfigSchema = exports_external.object({
   archives: exports_external.array(ArchiveSchema),
-  crawl: CrawlConfigSchema,
+  crawl: CrawlConfigSchema.optional(),
   pure: exports_external.object({
     apiKey: exports_external.string().optional()
   }).optional()
 });
+var defaultCrawlConfig = {
+  maxConcurrency: 3,
+  delay: 1000,
+  userAgent: DEFAULT_USER_AGENT,
+  timeout: 30000
+};
 var defaultConfig = {
   archives: [],
-  crawl: {
-    maxConcurrency: 3,
-    delay: 1000,
-    userAgent: DEFAULT_USER_AGENT,
-    timeout: 30000
-  }
+  crawl: defaultCrawlConfig
 };
 
 // src/cli.ts
@@ -45467,26 +45468,30 @@ class ConfigService {
     return this.getConfig().archives;
   }
   getCrawlConfig() {
-    return this.getConfig().crawl || {};
+    const config = this.getConfig();
+    return {
+      ...defaultCrawlConfig,
+      ...config.crawl
+    };
   }
   getPureApiKey() {
     const config = this.getConfig();
     return resolvePureApiKey(config);
   }
   isDebugMode() {
-    return this.getCrawlConfig().debug || false;
+    return this.getCrawlConfig().debug ?? false;
   }
   getUserAgent() {
-    return this.getCrawlConfig().userAgent || "Archivist/0.1.0-beta.6";
+    return this.getCrawlConfig().userAgent;
   }
   getMaxConcurrency() {
-    return this.getCrawlConfig().maxConcurrency || 3;
+    return this.getCrawlConfig().maxConcurrency;
   }
   getDelay() {
-    return this.getCrawlConfig().delay || 1000;
+    return this.getCrawlConfig().delay;
   }
   getTimeout() {
-    return this.getCrawlConfig().timeout || 30000;
+    return this.getCrawlConfig().timeout;
   }
   updateConfig(updates) {
     if (!this.config) {
@@ -46839,7 +46844,10 @@ program2.command("crawl").description("Crawl and archive web content").option("-
     }
     if (options.debug) {
       config.crawl = {
-        ...config.crawl,
+        maxConcurrency: config.crawl?.maxConcurrency ?? defaultCrawlConfig.maxConcurrency,
+        delay: config.crawl?.delay ?? defaultCrawlConfig.delay,
+        userAgent: config.crawl?.userAgent ?? defaultCrawlConfig.userAgent,
+        timeout: config.crawl?.timeout ?? defaultCrawlConfig.timeout,
         debug: true
       };
     }

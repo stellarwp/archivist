@@ -1,5 +1,6 @@
 import { singleton } from 'tsyringe';
-import type { ArchivistConfig } from '../config/schema';
+import type { ArchivistConfig, CrawlConfig } from '../config/schema';
+import { defaultCrawlConfig } from '../config/schema';
 import { resolvePureApiKey } from '../utils/pure-api-key';
 
 /**
@@ -61,12 +62,16 @@ export class ConfigService {
   }
   
   /**
-   * Returns crawl-specific configuration.
+   * Returns crawl-specific configuration with defaults.
    * 
    * @returns {CrawlConfig} Crawl configuration with defaults
    */
-  getCrawlConfig() {
-    return this.getConfig().crawl || {};
+  getCrawlConfig(): CrawlConfig {
+    const config = this.getConfig();
+    return {
+      ...defaultCrawlConfig,
+      ...config.crawl
+    };
   }
   
   /**
@@ -86,7 +91,7 @@ export class ConfigService {
    * @returns {boolean} True if debug mode is enabled
    */
   isDebugMode(): boolean {
-    return this.getCrawlConfig().debug || false;
+    return this.getCrawlConfig().debug ?? false;
   }
   
   /**
@@ -95,7 +100,7 @@ export class ConfigService {
    * @returns {string} User agent string with default fallback
    */
   getUserAgent(): string {
-    return this.getCrawlConfig().userAgent || 'Archivist/0.1.0-beta.6';
+    return this.getCrawlConfig().userAgent;
   }
   
   /**
@@ -104,7 +109,7 @@ export class ConfigService {
    * @returns {number} Max concurrency with default of 3
    */
   getMaxConcurrency(): number {
-    return this.getCrawlConfig().maxConcurrency || 3;
+    return this.getCrawlConfig().maxConcurrency;
   }
   
   /**
@@ -113,7 +118,7 @@ export class ConfigService {
    * @returns {number} Delay in ms with default of 1000
    */
   getDelay(): number {
-    return this.getCrawlConfig().delay || 1000;
+    return this.getCrawlConfig().delay;
   }
   
   /**
@@ -122,7 +127,7 @@ export class ConfigService {
    * @returns {number} Timeout in ms with default of 30000
    */
   getTimeout(): number {
-    return this.getCrawlConfig().timeout || 30000;
+    return this.getCrawlConfig().timeout;
   }
   
   /**

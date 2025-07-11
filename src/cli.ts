@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import { Command } from 'commander';
 import { confirm, input, select } from '@inquirer/prompts';
 import type { ArchivistConfig } from './config/schema';
-import { ArchivistConfigSchema, defaultConfig } from './config/schema';
+import { ArchivistConfigSchema, defaultConfig, defaultCrawlConfig } from './config/schema';
 import { existsSync } from 'fs';
 import path from 'path';
 import { VERSION, DEFAULT_USER_AGENT } from './version';
@@ -63,7 +63,10 @@ program
       // Set debug mode if specified
       if (options.debug) {
         config.crawl = {
-          ...config.crawl,
+          maxConcurrency: config.crawl?.maxConcurrency ?? defaultCrawlConfig.maxConcurrency,
+          delay: config.crawl?.delay ?? defaultCrawlConfig.delay,
+          userAgent: config.crawl?.userAgent ?? defaultCrawlConfig.userAgent,
+          timeout: config.crawl?.timeout ?? defaultCrawlConfig.timeout,
           debug: true
         };
       }

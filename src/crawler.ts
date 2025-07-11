@@ -1,4 +1,5 @@
-import type { ArchivistConfig, Archive, Source } from './config/schema';
+import type { ArchivistConfig, Archive, Source, CrawlConfig } from './config/schema';
+import { defaultCrawlConfig } from './config/schema';
 import { PureMdClient } from './services/pure-md';
 import { LinkDiscoverer } from './services/link-discoverer';
 import { parseMarkdownContent } from './utils/markdown-parser';
@@ -78,7 +79,7 @@ export class WebCrawler {
 class ArchiveCrawler {
   private archive: Archive;
   private config: ArchivistConfig;
-  private crawlConfig: ArchivistConfig['crawl'];
+  private crawlConfig: CrawlConfig;
   private queue: Set<string> = new Set();
   private visited: Set<string> = new Set();
   private results: PageContent[] = [];
@@ -87,7 +88,7 @@ class ArchiveCrawler {
   private sourceMap: Map<string, Source> = new Map();
 
   private debug(...args: any[]) {
-    if (this.crawlConfig.debug) {
+    if (this.crawlConfig.debug ?? false) {
       console.log('[DEBUG]', new Date().toISOString(), ...args);
     }
   }
@@ -99,7 +100,7 @@ class ArchiveCrawler {
   ) {
     this.archive = archive;
     this.config = config;
-    this.crawlConfig = config.crawl;
+    this.crawlConfig = config.crawl ?? defaultCrawlConfig;
     this.pureClient = pureClient;
     this.linkDiscoverer = appContainer.resolve(LinkDiscoverer);
   }
