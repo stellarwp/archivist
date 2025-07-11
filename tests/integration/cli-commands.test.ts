@@ -113,7 +113,8 @@ describe('CLI Commands', () => {
         }],
         crawl: {
           maxConcurrency: 1,
-          delay: 100
+          delay: 100,
+          timeout: 2000  // Add timeout to prevent hanging
         }
       };
       await Bun.write(customConfigPath, JSON.stringify(config, null, 2));
@@ -124,7 +125,7 @@ describe('CLI Commands', () => {
       // Should at least parse the config without errors
       // (actual crawling would require network access)
       expect(result.stdout.toString() || result.stderr.toString()).toBeTruthy();
-    });
+    }, 10000);  // Give test 10 seconds total
 
     it('should validate config schema', async () => {
       // Create an invalid config
