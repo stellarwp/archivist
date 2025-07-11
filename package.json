@@ -1,6 +1,6 @@
 {
   "name": "@stellarwp/archivist",
-  "version": "0.1.0-beta.8",
+  "version": "0.1.0-beta.9",
   "description": "A Bun-based tool for archiving web content as LLM context using Pure.md API",
   "keywords": ["web-archiver", "content-extraction", "pure-md", "llm", "web-crawler", "bun"],
   "homepage": "https://github.com/stellarwp/archivist#readme",
