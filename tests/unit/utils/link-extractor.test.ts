@@ -1,4 +1,4 @@
-import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
+import { describe, expect, it, mock, beforeEach, afterEach, spyOn } from 'bun:test';
 import { extractLinksFromPage } from '../../../src/utils/link-extractor';
 import { appContainer } from '../../../src/di/container';
 import { LinkDiscoverer } from '../../../src/services/link-discoverer';
@@ -105,12 +105,17 @@ const mockResponses: Record<string, string> = {
 };
 
 describe('link-extractor', () => {
+  let consoleErrorSpy: any;
+  
   beforeEach(() => {
     // Clear existing instances
     appContainer.clearInstances();
     
     // Register the mock as an instance
     appContainer.registerInstance(LinkDiscoverer, mockLinkDiscoverer as any);
+    
+    // Suppress console.error for expected errors
+    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -118,6 +123,8 @@ describe('link-extractor', () => {
     mock.restore();
     // Clear container instances
     appContainer.clearInstances();
+    // Restore console.error
+    consoleErrorSpy?.mockRestore();
   });
 
   describe('extractLinksFromPage', () => {
