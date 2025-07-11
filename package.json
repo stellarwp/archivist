@@ -49,7 +49,7 @@
     "test:all": "bunx tsc --noEmit && bun test",
     "test:install": "bun test tests/integration/package-installation.test.ts",
     "test:cli": "bun test tests/integration/cli-commands.test.ts",
-    "lint": "bunx tsc --noEmit",
+    "type-check": "bunx tsc --noEmit",
     "prepublishOnly": "bun run build && bunx tsc --noEmit && bun test",
     "build:action": "node build/build-action.js",
     "version:update": "bun run scripts/update-version.ts",
