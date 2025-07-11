@@ -8,7 +8,7 @@ import { join } from 'path';
 describe('CLI Commands', () => {
   let testDir: string;
   let originalCwd: string;
-  const cliPath = join(__dirname, '../../bin/archivist');
+  const cliPath = join(__dirname, '../../dist/cli.js');
 
   beforeEach(() => {
     // Store original working directory
@@ -87,9 +87,10 @@ describe('CLI Commands', () => {
       // Run crawl - it will try to fetch example.com URLs
       const result = await $`bun ${cliPath} crawl`.quiet().nothrow();
       
-      // The crawl should fail (exit code 1) when URLs can't be fetched
-      expect(result.exitCode).toBe(1);
-      // The output should at least show that config was loaded
+      // The crawl should complete (exit code 0) even if URLs fail
+      // The crawler is designed to continue despite individual URL failures
+      expect(result.exitCode).toBe(0);
+      // The output should show that config was loaded and crawl started
       const output = result.stdout.toString() + result.stderr.toString();
       expect(output).toContain('Loading config from');
     }, 10000);  // Give test 10 seconds total

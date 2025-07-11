@@ -17,7 +17,7 @@
   "module": "src/index.ts",
   "type": "module",
   "bin": {
-    "archivist": "./bin/archivist"
+    "archivist": "./dist/cli.js"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -25,7 +25,7 @@
   },
   "files": [
     "src",
-    "bin",
+    "dist/cli.js",
     "archivist.config.ts",
     "README.md",
     "LICENSE",
@@ -40,16 +40,17 @@
   "scripts": {
     "archive": "bun run src/cli.ts",
     "dev": "bun run --watch src/cli.ts",
-    "test": "bunx tsc --noEmit && bun test",
-    "test:only": "bun test",
+    "build": "bun run scripts/build-cli.ts",
+    "test": "bun run build && bunx tsc --noEmit && bun test",
+    "test:only": "bun run scripts/test-setup.ts && bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
     "test:types": "bunx tsc --noEmit",
     "test:all": "bunx tsc --noEmit && bun test",
     "test:install": "bun test tests/integration/package-installation.test.ts",
     "test:cli": "bun test tests/integration/cli-commands.test.ts",
-    "lint": "bunx tsc --noEmit",
-    "prepublishOnly": "bunx tsc --noEmit && bun test",
+    "type-check": "bunx tsc --noEmit",
+    "prepublishOnly": "bun run build && bunx tsc --noEmit && bun test",
     "build:action": "node build/build-action.js",
     "version:update": "bun run scripts/update-version.ts",
     "docs": "typedoc",
