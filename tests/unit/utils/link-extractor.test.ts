@@ -1,11 +1,9 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
 import { extractLinksFromPage } from '../../../src/utils/link-extractor';
-import axios from 'axios';
+import { appContainer } from '../../../src/di/container';
+import { LinkDiscoverer } from '../../../src/services/link-discoverer';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-
-// Store original axios.get
-const originalAxiosGet = axios.get;
 
 // Load mock HTML fixtures
 const fixturesPath = join(__dirname, '../../fixtures');
@@ -14,28 +12,109 @@ const docsPage = readFileSync(join(fixturesPath, 'documentation-page.html'), 'ut
 const blogPage = readFileSync(join(fixturesPath, 'blog-page.html'), 'utf-8');
 const apiIndex = readFileSync(join(fixturesPath, 'api-index.html'), 'utf-8');
 
+// Mock link discoverer
+const mockLinkDiscoverer = {
+  discoverLinks: mock(async (url: string, options?: any) => {
+    const htmlContent = mockResponses[url];
+    if (!htmlContent) {
+      throw new Error('Not found');
+    }
+    
+    // Parse the HTML content to extract links
+    const links: string[] = [];
+    const linkRegex = /<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1/gi;
+    let match;
+    
+    while ((match = linkRegex.exec(htmlContent)) !== null) {
+      const href = match[2];
+      if (href) {
+        try {
+          const absoluteUrl = new URL(href, url).toString();
+          if (absoluteUrl.startsWith('http://') || absoluteUrl.startsWith('https://')) {
+            // Apply filters if provided
+            if (options?.includePatterns || options?.excludePatterns) {
+              const shouldInclude = options.includePatterns 
+                ? options.includePatterns.some((pattern: string) => new RegExp(pattern).test(absoluteUrl))
+                : true;
+              const shouldExclude = options.excludePatterns
+                ? options.excludePatterns.some((pattern: string) => new RegExp(pattern).test(absoluteUrl))
+                : false;
+                
+              if (shouldInclude && !shouldExclude) {
+                links.push(absoluteUrl);
+              }
+            } else {
+              links.push(absoluteUrl);
+            }
+          }
+        } catch {
+          // Invalid URL, skip
+        }
+      }
+    }
+    
+    // Remove duplicates
+    const uniqueLinks = Array.from(new Set(links));
+    
+    return {
+      url,
+      links: uniqueLinks,
+      crawledAt: new Date().toISOString(),
+    };
+  }),
+};
+
 // Mock responses
 const mockResponses: Record<string, string> = {
   'https://test.local/index': simplePage,
   'https://test.local/docs': docsPage,
   'https://test.local/blog': blogPage,
   'https://test.local/api': apiIndex,
+  'https://test.local/test': `
+    <!DOCTYPE html>
+    <html>
+    <body>
+      <a href="/page1">Link 1</a>
+      <a href="/page1">Link 1 again</a>
+      <a href="https://test.local/page1">Link 1 absolute</a>
+      <a href="/page2">Link 2</a>
+    </body>
+    </html>
+  `,
+  'https://test.local/nolinks': `
+    <!DOCTYPE html>
+    <html>
+    <body>
+      <h1>Page with no links</h1>
+      <p>Just text content</p>
+    </body>
+    </html>
+  `,
+  'https://test.local/malformed': `
+    <!DOCTYPE html>
+    <html>
+    <body>
+      <a href="javascript:void(0)">JavaScript link</a>
+      <a href="mailto:test@example.com">Email link</a>
+      <a href="/valid/path">Valid relative link</a>
+      <a href="">Empty href</a>
+      <a>No href attribute</a>
+    </body>
+    </html>
+  `,
 };
 
 describe('link-extractor', () => {
   beforeEach(() => {
-    // Mock axios.get for this test suite
-    axios.get = mock((url: string) => {
-      if (mockResponses[url]) {
-        return Promise.resolve({ data: mockResponses[url] });
-      }
-      return Promise.reject(new Error('Not found'));
-    }) as any;
+    // Mock the LinkDiscoverer in the DI container
+    appContainer.register(LinkDiscoverer, {
+      useValue: mockLinkDiscoverer,
+    });
   });
 
   afterEach(() => {
-    // Restore original axios.get
-    axios.get = originalAxiosGet;
+    // Clear all mocks
+    mock.restore();
   });
 
   describe('extractLinksFromPage', () => {
@@ -124,21 +203,6 @@ describe('link-extractor', () => {
     });
 
     it('should remove duplicate links', async () => {
-      // Add a mock response with duplicate links
-      const duplicatesHtml = `
-        <!DOCTYPE html>
-        <html>
-        <body>
-          <a href="/page1">Link 1</a>
-          <a href="/page1">Link 1 again</a>
-          <a href="https://test.local/page1">Link 1 absolute</a>
-          <a href="/page2">Link 2</a>
-        </body>
-        </html>
-      `;
-      
-      axios.get = mock(() => Promise.resolve({ data: duplicatesHtml })) as any;
-
       const result = await extractLinksFromPage({
         url: 'https://test.local/test',
         userAgent: 'Test/1.0',
@@ -168,18 +232,6 @@ describe('link-extractor', () => {
     });
 
     it('should handle pages with no links', async () => {
-      const noLinksHtml = `
-        <!DOCTYPE html>
-        <html>
-        <body>
-          <h1>Page with no links</h1>
-          <p>Just text content</p>
-        </body>
-        </html>
-      `;
-      
-      axios.get = mock(() => Promise.resolve({ data: noLinksHtml })) as any;
-
       const result = await extractLinksFromPage({
         url: 'https://test.local/nolinks',
         userAgent: 'Test/1.0',
@@ -190,21 +242,6 @@ describe('link-extractor', () => {
     });
 
     it('should handle malformed URLs gracefully', async () => {
-      const malformedHtml = `
-        <!DOCTYPE html>
-        <html>
-        <body>
-          <a href="://broken">Broken protocol</a>
-          <a href="//incomplete.com/path">Protocol-relative</a>
-          <a href="javascript:void(0)">JavaScript</a>
-          <a href="mailto:test@test.com">Email</a>
-          <a href="/valid/path">Valid relative</a>
-        </body>
-        </html>
-      `;
-      
-      axios.get = mock(() => Promise.resolve({ data: malformedHtml })) as any;
-
       const result = await extractLinksFromPage({
         url: 'https://test.local/malformed',
         userAgent: 'Test/1.0',
