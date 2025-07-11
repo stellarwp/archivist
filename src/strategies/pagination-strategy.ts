@@ -5,6 +5,7 @@ import { appContainer } from '../di/container';
 import { extractLinksFromPage } from '../utils/link-extractor';
 import axios from 'axios';
 import { getAxiosConfig } from '../utils/axios-config';
+import { PaginationStopDetector, type PaginationStopConfig } from '../utils/pagination-stop-detector';
 
 /**
  * Strategy for handling paginated content.
@@ -58,6 +59,7 @@ export class PaginationStrategy extends BaseStrategy {
    * @param {number} [config.pagination.startPage] - First page number
    * @param {number} [config.pagination.maxPages] - Maximum pages to crawl
    * @param {string} [config.pagination.nextLinkSelector] - CSS selector for next page link
+   * @param {Object} [config.pagination.stopConditions] - Conditions for stopping pagination
    * @returns {Promise<StrategyResult>} Result containing all discovered content links
    */
   async execute(sourceUrl: string, config: any): Promise<StrategyResult> {
@@ -67,6 +69,9 @@ export class PaginationStrategy extends BaseStrategy {
     
     // Initialize the set to track pagination URLs
     this.collectedPageUrls = new Set<string>();
+    
+    // Initialize stop detector with custom config if provided
+    const stopDetector = new PaginationStopDetector(pagination.stopConditions);
     
     this.debug(config, `Starting pagination for ${sourceUrl}`);
     this.debug(config, `Pagination config:`, JSON.stringify(pagination));
@@ -97,16 +102,36 @@ export class PaginationStrategy extends BaseStrategy {
         
         if (pageUrl && pageUrl !== sourceUrl) {
           // Check if the page exists before adding it
-          const exists = await this.checkPageExists(pageUrl);
+          const { exists, status, content } = await this.checkPageWithContent(pageUrl);
+          
           if (exists) {
             this.debug(config, `Page ${page} exists, adding to page URLs`);
             pageUrls.push(pageUrl);
             this.collectedPageUrls!.add(pageUrl);
+            
+            // Extract links to check stop conditions early
+            try {
+              const links = await this.extractLinksFromPage(pageUrl, config);
+              const stopCheck = stopDetector.shouldStop(page, pageUrl, links, content, status);
+              
+              if (stopCheck.shouldStop) {
+                console.log(`  ⚠️  ${stopCheck.reason}`);
+                break;
+              }
+              
+              // Add extracted links to avoid re-fetching later
+              links.forEach(link => allExtractedLinks.add(link));
+            } catch (error) {
+              this.debug(config, `Error pre-extracting links from page ${page}: ${error}`);
+            }
           } else {
-            // Page doesn't exist, assume pagination ended
-            this.debug(config, `Page ${page} returned 404, stopping pagination`);
-            console.log(`Pagination ended at page ${page - 1} (404 on ${pageUrl})`);
-            break;
+            // Page doesn't exist
+            const stopCheck = stopDetector.shouldStop(page, pageUrl, [], content, status);
+            
+            if (stopCheck.shouldStop) {
+              console.log(`  ⚠️  ${stopCheck.reason}`);
+              break;
+            }
           }
         }
       }
@@ -122,14 +147,35 @@ export class PaginationStrategy extends BaseStrategy {
         const pageUrl = this.buildPageUrl(sourceUrl, '', pageParam, page);
         if (pageUrl && pageUrl !== sourceUrl) {
           // Check if the page exists before adding it
-          const exists = await this.checkPageExists(pageUrl);
+          const { exists, status, content } = await this.checkPageWithContent(pageUrl);
+          
           if (exists) {
             pageUrls.push(pageUrl);
             this.collectedPageUrls!.add(pageUrl);
+            
+            // Extract links to check stop conditions early
+            try {
+              const links = await this.extractLinksFromPage(pageUrl, config);
+              const stopCheck = stopDetector.shouldStop(page, pageUrl, links, content, status);
+              
+              if (stopCheck.shouldStop) {
+                console.log(`  ⚠️  ${stopCheck.reason}`);
+                break;
+              }
+              
+              // Add extracted links to avoid re-fetching later
+              links.forEach(link => allExtractedLinks.add(link));
+            } catch (error) {
+              this.debug(config, `Error pre-extracting links from page ${page}: ${error}`);
+            }
           } else {
-            // Page doesn't exist, assume pagination ended
-            console.log(`Pagination ended at page ${page - 1} (404 on ${pageUrl})`);
-            break;
+            // Page doesn't exist
+            const stopCheck = stopDetector.shouldStop(page, pageUrl, [], content, status);
+            
+            if (stopCheck.shouldStop) {
+              console.log(`  ⚠️  ${stopCheck.reason}`);
+              break;
+            }
           }
         }
       }
@@ -140,15 +186,29 @@ export class PaginationStrategy extends BaseStrategy {
       let currentUrl = sourceUrl;
       const maxPages = pagination.maxPages || 50;
       const visitedUrls = new Set<string>([sourceUrl]);
+      let pageNumber = 1;
       
       this.debug(config, `Using next link selector: ${pagination.nextLinkSelector}`);
       this.debug(config, `Max pages for next link following: ${maxPages}`);
       
       while (pageUrls.length < maxPages) {
         try {
+          // First extract all links from current page for stop detection
+          const allPageLinks = await this.extractLinksFromPage(currentUrl, config);
+          allPageLinks.forEach(link => allExtractedLinks.add(link));
+          
+          // Check stop conditions
+          const stopCheck = stopDetector.shouldStop(pageNumber, currentUrl, allPageLinks);
+          if (stopCheck.shouldStop) {
+            console.log(`  ⚠️  ${stopCheck.reason}`);
+            break;
+          }
+          
+          // Now look for next page link
           const links = await this.getLinkDiscoverer().discover(currentUrl, pagination.nextLinkSelector);
           
           if (links.length === 0) {
+            this.debug(config, `No next link found on ${currentUrl}`);
             break;
           }
           
@@ -163,6 +223,7 @@ export class PaginationStrategy extends BaseStrategy {
           }
           
           if (!nextUrl) {
+            this.debug(config, `All next links already visited from ${currentUrl}`);
             break;
           }
           
@@ -170,6 +231,7 @@ export class PaginationStrategy extends BaseStrategy {
           visitedUrls.add(nextUrl);
           this.collectedPageUrls!.add(nextUrl);
           currentUrl = nextUrl;
+          pageNumber++;
           
         } catch (error) {
           console.error(`Error discovering next page from ${currentUrl}:`, error);
@@ -178,22 +240,18 @@ export class PaginationStrategy extends BaseStrategy {
       }
     }
     
-    // Now extract links from all paginated pages
-    this.debug(config, `Found ${pageUrls.length} paginated pages, extracting links from each...`);
-    console.log(`  📄 Processing ${pageUrls.length} paginated pages...`);
+    // Now extract links from any paginated pages we haven't processed yet
+    this.debug(config, `Found ${pageUrls.length} paginated pages`);
     
+    // Only process pages we haven't already extracted links from
     for (let i = 0; i < pageUrls.length; i++) {
       const pageUrl = pageUrls[i];
-      if (!pageUrl) continue;
+      if (!pageUrl || this.collectedPageUrls?.has(pageUrl)) continue;
       
       try {
-        console.log(`    [${i + 1}/${pageUrls.length}] Extracting links from: ${pageUrl}`);
-        this.debug(config, `Extracting links from page: ${pageUrl}`);
+        this.debug(config, `Extracting remaining links from page: ${pageUrl}`);
         const links = await this.extractLinksFromPage(pageUrl, config);
         this.debug(config, `Found ${links.length} links on ${pageUrl}`);
-        if (links.length > 0) {
-          console.log(`    ✓ Found ${links.length} links`);
-        }
         
         // Add all extracted links to the set (deduplication)
         links.forEach(link => allExtractedLinks.add(link));
@@ -202,8 +260,19 @@ export class PaginationStrategy extends BaseStrategy {
       }
     }
     
+    // Log stop detector stats
+    const stats = stopDetector.getStats();
     this.debug(config, `Pagination complete. Found ${allExtractedLinks.size} total unique links from ${pageUrls.length} pages`);
-    console.log(`  ✓ Pagination complete: ${allExtractedLinks.size} unique links collected`);
+    this.debug(config, `Stop detector stats:`, JSON.stringify(stats));
+    
+    console.log(`  ✓ Pagination complete: ${allExtractedLinks.size} unique links collected from ${pageUrls.length} pages`);
+    if (stats.error404Count > 0) {
+      console.log(`    - Encountered ${stats.error404Count} 404 errors`);
+    }
+    if (stats.averageNewLinksPerPage < 5) {
+      console.log(`    - Average new links per page: ${stats.averageNewLinksPerPage.toFixed(1)}`);
+    }
+    
     return { urls: Array.from(allExtractedLinks) };
   }
   
@@ -248,25 +317,54 @@ export class PaginationStrategy extends BaseStrategy {
   }
   
   private async checkPageExists(url: string, retries: number = 1): Promise<boolean> {
+    const { exists } = await this.checkPageWithContent(url, retries);
+    return exists;
+  }
+
+  private async checkPageWithContent(url: string, retries: number = 1): Promise<{
+    exists: boolean;
+    status?: number;
+    content?: string;
+  }> {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const response = await axios.head(url, {
+        // First try HEAD request to check existence
+        const headResponse = await axios.head(url, {
           ...getAxiosConfig(),
           timeout: 5000, // Shorter timeout for HEAD requests
           validateStatus: (status) => status < 500, // Don't throw on 4xx errors
         });
         
-        if (response.status === 404) {
+        if (headResponse.status === 404) {
           if (attempt < retries) {
             // Wait a bit before retry
             await new Promise(resolve => setTimeout(resolve, 1000));
             continue;
           }
-          return false;
+          return { exists: false, status: 404 };
         }
         
-        // Any 2xx or 3xx status means the page exists
-        return response.status >= 200 && response.status < 400;
+        // If page exists, fetch content for error detection
+        if (headResponse.status >= 200 && headResponse.status < 400) {
+          try {
+            const contentResponse = await axios.get(url, {
+              ...getAxiosConfig(),
+              timeout: 10000,
+              maxContentLength: 100000, // Limit content size for error detection
+            });
+            
+            return {
+              exists: true,
+              status: contentResponse.status,
+              content: contentResponse.data
+            };
+          } catch (contentError) {
+            // If we can't get content, still report page exists
+            return { exists: true, status: headResponse.status };
+          }
+        }
+        
+        return { exists: false, status: headResponse.status };
       } catch (error) {
         // Network errors or timeouts
         if (attempt < retries) {
@@ -275,10 +373,10 @@ export class PaginationStrategy extends BaseStrategy {
         }
         // After retries, assume page doesn't exist
         console.error(`Error checking page existence for ${url}:`, error);
-        return false;
+        return { exists: false };
       }
     }
     
-    return false;
+    return { exists: false };
   }
 }

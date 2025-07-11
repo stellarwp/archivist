@@ -44678,6 +44678,20 @@ var USER_AGENT = `Archivist/${VERSION}`;
 var DEFAULT_USER_AGENT = USER_AGENT;
 
 // src/config/schema.ts
+var PaginationStopConditionsSchema = exports_external.object({
+  consecutiveEmptyPages: exports_external.number().min(1).default(3).optional().describe("Stop after N pages with no new links"),
+  max404Errors: exports_external.number().min(1).default(2).optional().describe("Stop after N 404 errors"),
+  errorKeywords: exports_external.array(exports_external.string()).optional().describe("Keywords indicating error pages"),
+  minNewLinksPerPage: exports_external.number().min(0).default(1).optional().describe("Minimum new links to continue")
+}).optional();
+var PaginationConfigSchema = exports_external.object({
+  startPage: exports_external.number().default(1).optional(),
+  maxPages: exports_external.number().optional(),
+  pageParam: exports_external.string().default("page").optional(),
+  pagePattern: exports_external.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
+  nextLinkSelector: exports_external.string().optional().describe("CSS selector for next page link"),
+  stopConditions: PaginationStopConditionsSchema.describe("Conditions for early pagination stopping")
+});
 var SourceSchema = exports_external.union([
   exports_external.string().url(),
   exports_external.object({
@@ -44688,13 +44702,7 @@ var SourceSchema = exports_external.union([
     includePatterns: exports_external.array(exports_external.string()).optional().describe("Regex patterns - only follow links matching these"),
     excludePatterns: exports_external.array(exports_external.string()).optional().describe("Regex patterns - exclude links matching these"),
     strategy: exports_external.enum(["explorer", "pagination"]).default("explorer").optional().describe("Source crawling strategy"),
-    pagination: exports_external.object({
-      startPage: exports_external.number().default(1).optional(),
-      maxPages: exports_external.number().optional(),
-      pageParam: exports_external.string().default("page").optional(),
-      pagePattern: exports_external.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
-      nextLinkSelector: exports_external.string().optional().describe("CSS selector for next page link")
-    }).optional().describe("Configuration for pagination strategy")
+    pagination: PaginationConfigSchema.optional().describe("Configuration for pagination strategy")
   })
 ]);
 var SourcesSchema = exports_external.union([
@@ -44717,13 +44725,6 @@ var CrawlConfigSchema = exports_external.object({
   userAgent: exports_external.string().default(DEFAULT_USER_AGENT),
   timeout: exports_external.number().min(1000).default(30000),
   debug: exports_external.boolean().default(false).optional()
-});
-var PaginationConfigSchema = exports_external.object({
-  startPage: exports_external.number().default(1).optional(),
-  maxPages: exports_external.number().optional(),
-  pageParam: exports_external.string().default("page").optional(),
-  pagePattern: exports_external.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
-  nextLinkSelector: exports_external.string().optional().describe("CSS selector for next page link")
 });
 var ArchivistConfigSchema = exports_external.object({
   archives: exports_external.array(ArchiveSchema),
@@ -46281,6 +46282,124 @@ function getAxiosConfig(baseConfig = {}) {
   return config;
 }
 
+// src/utils/pagination-stop-detector.ts
+var DEFAULT_STOP_CONFIG = {
+  consecutiveEmptyPages: 3,
+  max404Errors: 2,
+  errorKeywords: [
+    "page not found",
+    "error 404",
+    "404 error",
+    "not found",
+    "page does not exist",
+    "no results found",
+    "end of results",
+    "no more pages",
+    "invalid page",
+    "page unavailable"
+  ],
+  minNewLinksPerPage: 1
+};
+
+class PaginationStopDetector {
+  config;
+  consecutiveEmptyCount = 0;
+  error404Count = 0;
+  seenLinks = new Set;
+  pageHistory = [];
+  constructor(config) {
+    this.config = { ...DEFAULT_STOP_CONFIG, ...config };
+  }
+  shouldStop(pageNumber, pageUrl, discoveredLinks, pageContent, httpStatus) {
+    if (httpStatus === 404) {
+      this.error404Count++;
+      this.pageHistory.push({
+        pageNumber,
+        url: pageUrl,
+        newLinksCount: 0,
+        totalLinks: 0,
+        hadError: true
+      });
+      if (this.error404Count >= this.config.max404Errors) {
+        return {
+          shouldStop: true,
+          reason: `Stopping: Reached ${this.error404Count} consecutive 404 errors`
+        };
+      }
+      return { shouldStop: false };
+    }
+    if (pageContent && this.isErrorPage(pageContent)) {
+      return {
+        shouldStop: true,
+        reason: "Stopping: Detected error page content"
+      };
+    }
+    const newLinks = discoveredLinks.filter((link) => !this.seenLinks.has(link));
+    discoveredLinks.forEach((link) => this.seenLinks.add(link));
+    this.pageHistory.push({
+      pageNumber,
+      url: pageUrl,
+      newLinksCount: newLinks.length,
+      totalLinks: discoveredLinks.length,
+      hadError: false
+    });
+    if (newLinks.length < this.config.minNewLinksPerPage) {
+      this.consecutiveEmptyCount++;
+      if (this.consecutiveEmptyCount >= this.config.consecutiveEmptyPages) {
+        return {
+          shouldStop: true,
+          reason: `Stopping: ${this.consecutiveEmptyCount} consecutive pages with fewer than ${this.config.minNewLinksPerPage} new links`
+        };
+      }
+    } else {
+      this.consecutiveEmptyCount = 0;
+    }
+    if (this.hasSignificantDecline()) {
+      return {
+        shouldStop: true,
+        reason: "Stopping: Significant decline in new links discovered"
+      };
+    }
+    return { shouldStop: false };
+  }
+  isErrorPage(content) {
+    const lowerContent = content.toLowerCase();
+    return this.config.errorKeywords.some((keyword) => lowerContent.includes(keyword.toLowerCase()));
+  }
+  hasSignificantDecline() {
+    if (this.pageHistory.length < 5)
+      return false;
+    const recentPages = this.pageHistory.slice(-5);
+    const nonErrorPages = recentPages.filter((p) => !p.hadError);
+    if (nonErrorPages.length < 3)
+      return false;
+    let decliningCount = 0;
+    for (let i = 1;i < nonErrorPages.length; i++) {
+      const current = nonErrorPages[i];
+      const previous = nonErrorPages[i - 1];
+      if (current && previous && current.newLinksCount < previous.newLinksCount) {
+        decliningCount++;
+      }
+    }
+    return decliningCount >= Math.floor(nonErrorPages.length * 0.8);
+  }
+  getStats() {
+    return {
+      totalPages: this.pageHistory.length,
+      totalUniqueLinks: this.seenLinks.size,
+      error404Count: this.error404Count,
+      averageNewLinksPerPage: this.pageHistory.length > 0 ? this.pageHistory.reduce((sum, p) => sum + (p?.newLinksCount || 0), 0) / this.pageHistory.length : 0,
+      pageHistory: this.pageHistory
+    };
+  }
+  reset() {
+    this.consecutiveEmptyCount = 0;
+    this.error404Count = 0;
+    this.seenLinks.clear();
+    this.pageHistory = [];
+  }
+}
+
 // src/strategies/pagination-strategy.ts
 class PaginationStrategy extends BaseStrategy {
   type = "pagination";
@@ -46303,6 +46422,7 @@ class PaginationStrategy extends BaseStrategy {
     const pageUrls = [];
     const allExtractedLinks = new Set;
     this.collectedPageUrls = new Set;
+    const stopDetector = new PaginationStopDetector(pagination.stopConditions);
     this.debug(config, `Starting pagination for ${sourceUrl}`);
     this.debug(config, `Pagination config:`, JSON.stringify(pagination));
     pageUrls.push(sourceUrl);
@@ -46321,15 +46441,28 @@ class PaginationStrategy extends BaseStrategy {
         const pageUrl = this.buildPageUrl(sourceUrl, pagination.pagePattern, pagination.pageParam, page);
         this.debug(config, `Checking page ${page}: ${pageUrl}`);
         if (pageUrl && pageUrl !== sourceUrl) {
-          const exists = await this.checkPageExists(pageUrl);
+          const { exists, status, content } = await this.checkPageWithContent(pageUrl);
           if (exists) {
             this.debug(config, `Page ${page} exists, adding to page URLs`);
             pageUrls.push(pageUrl);
             this.collectedPageUrls.add(pageUrl);
+            try {
+              const links = await this.extractLinksFromPage(pageUrl, config);
+              const stopCheck = stopDetector.shouldStop(page, pageUrl, links, content, status);
+              if (stopCheck.shouldStop) {
+                console.log(`  \u26A0\uFE0F  ${stopCheck.reason}`);
+                break;
+              }
+              links.forEach((link) => allExtractedLinks.add(link));
+            } catch (error) {
+              this.debug(config, `Error pre-extracting links from page ${page}: ${error}`);
+            }
           } else {
-            this.debug(config, `Page ${page} returned 404, stopping pagination`);
-            console.log(`Pagination ended at page ${page - 1} (404 on ${pageUrl})`);
-            break;
+            const stopCheck = stopDetector.shouldStop(page, pageUrl, [], content, status);
+            if (stopCheck.shouldStop) {
+              console.log(`  \u26A0\uFE0F  ${stopCheck.reason}`);
+              break;
+            }
           }
         }
       }
@@ -46340,13 +46473,27 @@ class PaginationStrategy extends BaseStrategy {
       for (let page = startPage;page <= startPage + maxPages - 1; page++) {
         const pageUrl = this.buildPageUrl(sourceUrl, "", pageParam, page);
         if (pageUrl && pageUrl !== sourceUrl) {
-          const exists = await this.checkPageExists(pageUrl);
+          const { exists, status, content } = await this.checkPageWithContent(pageUrl);
           if (exists) {
             pageUrls.push(pageUrl);
             this.collectedPageUrls.add(pageUrl);
+            try {
+              const links = await this.extractLinksFromPage(pageUrl, config);
+              const stopCheck = stopDetector.shouldStop(page, pageUrl, links, content, status);
+              if (stopCheck.shouldStop) {
+                console.log(`  \u26A0\uFE0F  ${stopCheck.reason}`);
+                break;
+              }
+              links.forEach((link) => allExtractedLinks.add(link));
+            } catch (error) {
+              this.debug(config, `Error pre-extracting links from page ${page}: ${error}`);
+            }
           } else {
-            console.log(`Pagination ended at page ${page - 1} (404 on ${pageUrl})`);
-            break;
+            const stopCheck = stopDetector.shouldStop(page, pageUrl, [], content, status);
+            if (stopCheck.shouldStop) {
+              console.log(`  \u26A0\uFE0F  ${stopCheck.reason}`);
+              break;
+            }
           }
         }
       }
@@ -46354,12 +46501,21 @@ class PaginationStrategy extends BaseStrategy {
       let currentUrl = sourceUrl;
       const maxPages = pagination.maxPages || 50;
       const visitedUrls = new Set([sourceUrl]);
+      let pageNumber = 1;
       this.debug(config, `Using next link selector: ${pagination.nextLinkSelector}`);
       this.debug(config, `Max pages for next link following: ${maxPages}`);
       while (pageUrls.length < maxPages) {
         try {
+          const allPageLinks = await this.extractLinksFromPage(currentUrl, config);
+          allPageLinks.forEach((link) => allExtractedLinks.add(link));
+          const stopCheck = stopDetector.shouldStop(pageNumber, currentUrl, allPageLinks);
+          if (stopCheck.shouldStop) {
+            console.log(`  \u26A0\uFE0F  ${stopCheck.reason}`);
+            break;
+          }
           const links = await this.getLinkDiscoverer().discover(currentUrl, pagination.nextLinkSelector);
           if (links.length === 0) {
+            this.debug(config, `No next link found on ${currentUrl}`);
             break;
           }
           let nextUrl = null;
@@ -46371,39 +46527,44 @@ class PaginationStrategy extends BaseStrategy {
             }
           }
           if (!nextUrl) {
+            this.debug(config, `All next links already visited from ${currentUrl}`);
             break;
           }
           pageUrls.push(nextUrl);
           visitedUrls.add(nextUrl);
           this.collectedPageUrls.add(nextUrl);
           currentUrl = nextUrl;
+          pageNumber++;
         } catch (error) {
           console.error(`Error discovering next page from ${currentUrl}:`, error);
           break;
         }
       }
     }
-    this.debug(config, `Found ${pageUrls.length} paginated pages, extracting links from each...`);
-    console.log(`  \uD83D\uDCC4 Processing ${pageUrls.length} paginated pages...`);
+    this.debug(config, `Found ${pageUrls.length} paginated pages`);
     for (let i = 0;i < pageUrls.length; i++) {
       const pageUrl = pageUrls[i];
-      if (!pageUrl)
+      if (!pageUrl || this.collectedPageUrls?.has(pageUrl))
         continue;
       try {
-        console.log(`    [${i + 1}/${pageUrls.length}] Extracting links from: ${pageUrl}`);
-        this.debug(config, `Extracting links from page: ${pageUrl}`);
+        this.debug(config, `Extracting remaining links from page: ${pageUrl}`);
         const links = await this.extractLinksFromPage(pageUrl, config);
         this.debug(config, `Found ${links.length} links on ${pageUrl}`);
-        if (links.length > 0) {
-          console.log(`    \u2713 Found ${links.length} links`);
-        }
         links.forEach((link) => allExtractedLinks.add(link));
       } catch (error) {
         console.error(`Error extracting links from ${pageUrl}:`, error);
       }
     }
+    const stats = stopDetector.getStats();
     this.debug(config, `Pagination complete. Found ${allExtractedLinks.size} total unique links from ${pageUrls.length} pages`);
-    console.log(`  \u2713 Pagination complete: ${allExtractedLinks.size} unique links collected`);
+    this.debug(config, `Stop detector stats:`, JSON.stringify(stats));
+    console.log(`  \u2713 Pagination complete: ${allExtractedLinks.size} unique links collected from ${pageUrls.length} pages`);
+    if (stats.error404Count > 0) {
+      console.log(`    - Encountered ${stats.error404Count} 404 errors`);
+    }
+    if (stats.averageNewLinksPerPage < 5) {
+      console.log(`    - Average new links per page: ${stats.averageNewLinksPerPage.toFixed(1)}`);
+    }
     return { urls: Array.from(allExtractedLinks) };
   }
   async extractLinksFromPage(url2, config) {
@@ -46437,31 +46598,51 @@ class PaginationStrategy extends BaseStrategy {
     }
   }
   async checkPageExists(url2, retries = 1) {
+    const { exists } = await this.checkPageWithContent(url2, retries);
+    return exists;
+  }
+  async checkPageWithContent(url2, retries = 1) {
     for (let attempt = 0;attempt <= retries; attempt++) {
       try {
-        const response = await axios_default.head(url2, {
+        const headResponse = await axios_default.head(url2, {
           ...getAxiosConfig(),
           timeout: 5000,
           validateStatus: (status) => status < 500
         });
-        if (response.status === 404) {
+        if (headResponse.status === 404) {
           if (attempt < retries) {
             await new Promise((resolve) => setTimeout(resolve, 1000));
             continue;
           }
-          return false;
+          return { exists: false, status: 404 };
         }
-        return response.status >= 200 && response.status < 400;
+        if (headResponse.status >= 200 && headResponse.status < 400) {
+          try {
+            const contentResponse = await axios_default.get(url2, {
+              ...getAxiosConfig(),
+              timeout: 1e4,
+              maxContentLength: 1e5
+            });
+            return {
+              exists: true,
+              status: contentResponse.status,
+              content: contentResponse.data
+            };
+          } catch (contentError) {
+            return { exists: true, status: headResponse.status };
+          }
+        }
+        return { exists: false, status: headResponse.status };
       } catch (error) {
         if (attempt < retries) {
           await new Promise((resolve) => setTimeout(resolve, 1000));
           continue;
         }
         console.error(`Error checking page existence for ${url2}:`, error);
-        return false;
+        return { exists: false };
       }
     }
-    return false;
+    return { exists: false };
   }
 }
 

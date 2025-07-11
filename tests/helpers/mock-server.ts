@@ -2,6 +2,7 @@ import { serve } from 'bun';
 import * as explorer from './mock-responses/explorer';
 import * as pagination from './mock-responses/pagination';
 import * as content from './mock-responses/content';
+import * as paginationStop from './mock-responses/pagination-stop';
 
 interface MockServerResult {
   url: string;
@@ -36,6 +37,12 @@ export async function startMockServer(): Promise<MockServerResult> {
 
     // Content pages
     { pattern: /^\/article\/(\d+)$/, handler: (match) => content.articlePage(match[1]!) },
+    { pattern: /^\/article\/page\d+-\d+$/, handler: () => content.articlePage('1') },
+    { pattern: /^\/article\/404test-\d+-\d+$/, handler: () => content.articlePage('1') },
+    { pattern: /^\/article\/error-\d+-\d+$/, handler: () => content.articlePage('1') },
+    { pattern: /^\/article\/declining-\d+-\d+$/, handler: () => content.articlePage('1') },
+    { pattern: /^\/article\/mixed-\d+-\d+$/, handler: () => content.articlePage('1') },
+    { pattern: /^\/article\/custom-\d+-\d+$/, handler: () => content.articlePage('1') },
     { pattern: /^\/post\/(\d+)$/, handler: (match) => content.postPage(match[1]!) },
     { pattern: /^\/blog\/post\/(\d+)$/, handler: (match) => content.blogPostPage(match[1]!) },
     { pattern: /^\/archive\/post\/(\d+)$/, handler: (match) => content.archivePostPage(match[1]!) },
@@ -50,6 +57,32 @@ export async function startMockServer(): Promise<MockServerResult> {
 
     // Static pages
     { pattern: /^\/about$/, handler: () => content.aboutPage() },
+    
+    // Pagination stop test scenarios
+    { 
+      pattern: /^\/blog\/empty-pages\/page\/(\d+)$/, 
+      handler: (match) => paginationStop.consecutiveEmptyPages(parseInt(match[1]!))
+    },
+    { 
+      pattern: /^\/blog\/404-test\/page\/(\d+)$/, 
+      handler: (match) => paginationStop.pageWith404s(parseInt(match[1]!))
+    },
+    { 
+      pattern: /^\/blog\/error-content\/page\/(\d+)$/, 
+      handler: (match) => paginationStop.errorPageContent(parseInt(match[1]!))
+    },
+    { 
+      pattern: /^\/blog\/declining\/page\/(\d+)$/, 
+      handler: (match) => paginationStop.decliningLinks(parseInt(match[1]!))
+    },
+    { 
+      pattern: /^\/blog\/mixed-signals\/page\/(\d+)$/, 
+      handler: (match) => paginationStop.mixedSignals(parseInt(match[1]!))
+    },
+    { 
+      pattern: /^\/blog\/custom-stop\/page\/(\d+)$/, 
+      handler: (match) => paginationStop.customStopConditions(parseInt(match[1]!))
+    },
   ];
 
   const server = serve({

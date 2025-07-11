@@ -1,0 +1,36 @@
+{
+  "archives": [
+    {
+      "name": "Smart Pagination Demo",
+      "sources": [
+        {
+          "url": "https://example.com/blog",
+          "name": "Blog with Smart Pagination",
+          "strategy": "pagination",
+          "pagination": {
+            "pagePattern": "https://example.com/blog/page/{page}",
+            "startPage": 1,
+            "maxPages": 50,
+            "stopConditions": {
+              "consecutiveEmptyPages": 3,
+              "max404Errors": 2,
+              "minNewLinksPerPage": 2,
+              "errorKeywords": [
+                "page not found",
+                "no posts found",
+                "end of archive"
+              ]
+            }
+          },
+          "linkSelector": "article a[href]",
+          "includePatterns": ["/blog/\\d{4}/"]
+        }
+      ],
+      "output": {
+        "directory": "./archive/smart-pagination-demo",
+        "format": "markdown",
+        "fileNaming": "url-based"
+      }
+    }
+  ]
+}
