@@ -1,0 +1,28 @@
+# Text files (force LF line endings)
+*.ts text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.txt text eol=lf
+
+# Treat compiled files as binary
+dist/* binary
+dist/*.js binary
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text eol=lf
+
+# Other binary files
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.tgz binary
