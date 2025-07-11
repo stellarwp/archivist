@@ -296,6 +296,43 @@ export class StateService {
     writeFileSync(outputPath, JSON.stringify(linksData, null, 2));
   }
   
+  // Save collected links for a specific archive
+  saveArchiveCollectedLinks(archiveName: string, outputPath: string): void {
+    const archiveUrls = this.state.collectedUrls.filter(item => item.archiveName === archiveName);
+    
+    if (archiveUrls.length === 0) {
+      return;
+    }
+    
+    const totalUrls = archiveUrls.reduce((sum, item) => sum + item.urls.length, 0);
+    const totalPaginationPages = archiveUrls.reduce((sum, item) => sum + (item.paginationPages || 0), 0);
+    
+    const linksData = {
+      timestamp: new Date().toISOString(),
+      archiveName: archiveName,
+      summary: {
+        totalSources: archiveUrls.length,
+        totalUrls: totalUrls,
+        paginationPages: totalPaginationPages,
+      },
+      sources: archiveUrls.map(item => ({
+        source: item.sourceUrl,
+        strategy: item.strategy,
+        paginationPages: item.paginationPages,
+        urlCount: item.urls.length,
+        urls: item.urls,
+      })),
+    };
+    
+    // Ensure directory exists
+    const dir = join(outputPath, '..');
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    
+    writeFileSync(outputPath, JSON.stringify(linksData, null, 2));
+  }
+  
   /**
    * Adds a URL to the crawl queue for an archive.
    * Prevents duplicates and already visited URLs.

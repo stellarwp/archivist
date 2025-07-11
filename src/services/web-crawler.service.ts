@@ -1,4 +1,5 @@
 import { singleton } from 'tsyringe';
+import { join } from 'path';
 import { ConfigService } from './config.service';
 import { StateService } from './state.service';
 import { LoggerService } from './logger.service';
@@ -180,6 +181,10 @@ export class WebCrawlerService {
         this.stateService.addToQueue(archive.name, url);
       }
       
+      // Save collected links for this archive
+      const collectedLinksPath = join(archive.output.directory, 'collected-links.json');
+      this.stateService.saveArchiveCollectedLinks(archive.name, collectedLinksPath);
+      
       // Crawl all URLs
       await this.archiveCrawler.crawlUrls(archive, archiveState);
       
@@ -198,35 +203,49 @@ export class WebCrawlerService {
    * @returns {string} Formatted report or error message if file not found
    */
   getCollectedLinksReport(): string {
-    try {
-      const linksData = JSON.parse(readFileSync('collected-links.json', 'utf-8'));
-      const report = [];
-      
-      report.push(`\nCollected Links Summary`);
-      report.push('='.repeat(50));
-      report.push(`Total Archives: ${linksData.summary.totalArchives}`);
-      report.push(`Total URLs: ${linksData.summary.totalUrls}`);
-      
-      if (linksData.summary.paginationStats.totalPages > 0) {
-        report.push(`Pagination Pages: ${linksData.summary.paginationStats.totalPages}`);
-      }
-      
-      report.push('\nBreakdown by Archive:');
-      report.push('-'.repeat(50));
-      
-      for (const archive of linksData.archives) {
-        report.push(`\n${archive.archive}:`);
-        report.push(`  Source: ${archive.source}`);
-        report.push(`  Strategy: ${archive.strategy}`);
-        report.push(`  URL Count: ${archive.urlCount}`);
-        if (archive.paginationPages) {
-          report.push(`  Pagination Pages: ${archive.paginationPages}`);
-        }
-      }
-      
-      return report.join('\n');
-    } catch (error) {
-      return 'No collected links file found.';
+    const collectedUrls = this.stateService.getAllCollectedUrls();
+    const totalUrls = this.stateService.getTotalUrlCount();
+    const paginationStats = this.stateService.getPaginationStats();
+    
+    const report = [];
+    
+    report.push(`\nCollected Links Summary`);
+    report.push('='.repeat(50));
+    report.push(`Total Archives: ${this.configService.getArchives().length}`);
+    report.push(`Total URLs: ${totalUrls}`);
+    
+    if (paginationStats.totalPages > 0) {
+      report.push(`Pagination Pages: ${paginationStats.totalPages}`);
     }
+    
+    report.push('\nBreakdown by Archive:');
+    report.push('-'.repeat(50));
+    
+    // Group by archive for summary
+    const byArchive = new Map<string, { sources: Set<string>, urls: number, paginationPages: number }>();
+    
+    for (const item of collectedUrls) {
+      if (!byArchive.has(item.archiveName)) {
+        byArchive.set(item.archiveName, { sources: new Set(), urls: 0, paginationPages: 0 });
+      }
+      const archiveData = byArchive.get(item.archiveName)!;
+      archiveData.sources.add(item.sourceUrl);
+      archiveData.urls += item.urls.length;
+      archiveData.paginationPages += item.paginationPages || 0;
+    }
+    
+    for (const [archiveName, data] of byArchive) {
+      report.push(`\n${archiveName}:`);
+      report.push(`  Sources: ${data.sources.size}`);
+      report.push(`  URLs found: ${data.urls}`);
+      if (data.paginationPages > 0) {
+        report.push(`  Pagination pages: ${data.paginationPages}`);
+      }
+    }
+    
+    report.push('\n' + '-'.repeat(50));
+    report.push('Collected links will be saved to each archive\'s output directory');
+    
+    return report.join('\n');
   }
 }
