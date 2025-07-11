@@ -44673,7 +44673,7 @@ var coerce = {
 };
 var NEVER = INVALID;
 // src/version.ts
-var VERSION = "0.1.0-beta.8";
+var VERSION = "0.1.0-beta.9";
 var USER_AGENT = `Archivist/${VERSION}`;
 var DEFAULT_USER_AGENT = USER_AGENT;
 
