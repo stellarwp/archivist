@@ -166,7 +166,7 @@ describe('Source Strategies Integration', () => {
       expect(metadata.results.length).toBeGreaterThanOrEqual(8);
       
       // Should contain blog posts from pages 1-3
-      expect(crawledUrls.filter(url => url.includes('/blog/post/')).length).toBeGreaterThanOrEqual(6);
+      expect(crawledUrls.filter((url: string) => url.includes('/blog/post/')).length).toBeGreaterThanOrEqual(6);
       
       // Verify blog posts were crawled from different pages
       expect(crawledUrls).toContain(`${mockServerUrl}/blog/post/1`);  // From page 1
