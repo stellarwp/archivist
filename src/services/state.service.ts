@@ -1,7 +1,7 @@
 import { singleton } from 'tsyringe';
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import type { ArchiveConfig, SourceConfig } from '../../archivist.config';
+import type { ArchiveConfig, SourceConfig } from '../config/schema';
 
 /**
  * Result of crawling a single URL

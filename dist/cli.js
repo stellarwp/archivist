@@ -44677,7 +44677,7 @@ var VERSION = "0.1.0-beta.8";
 var USER_AGENT = `Archivist/${VERSION}`;
 var DEFAULT_USER_AGENT = USER_AGENT;
 
-// archivist.config.ts
+// src/config/schema.ts
 var SourceSchema = exports_external.union([
   exports_external.string().url(),
   exports_external.object({

@@ -7,7 +7,7 @@ import { LoggerService } from './logger.service';
 import { PureMdClient } from './pure-md';
 import { LinkDiscoverer } from './link-discoverer';
 import { HttpService } from './http.service';
-import type { ArchiveConfig, SourceConfig } from '../../archivist.config';
+import type { ArchiveConfig, SourceConfig } from '../config/schema';
 import { formatContent } from '../utils/content-formatter';
 import { generateFileName } from '../utils/file-naming';
 import { extractLinksFromPage } from '../utils/link-extractor';

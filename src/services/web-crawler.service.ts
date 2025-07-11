@@ -3,7 +3,7 @@ import { ConfigService } from './config.service';
 import { StateService } from './state.service';
 import { LoggerService } from './logger.service';
 import { ArchiveCrawlerService } from './archive-crawler.service';
-import type { ArchiveConfig } from '../../archivist.config';
+import type { ArchiveConfig } from '../config/schema';
 import { readFileSync } from 'fs';
 
 /**

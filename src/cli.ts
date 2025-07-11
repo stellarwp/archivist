@@ -2,8 +2,8 @@
 import 'reflect-metadata';
 import { Command } from 'commander';
 import { confirm, input, select } from '@inquirer/prompts';
-import type { ArchivistConfig } from '../archivist.config';
-import { ArchivistConfigSchema, defaultConfig } from '../archivist.config';
+import type { ArchivistConfig } from './config/schema';
+import { ArchivistConfigSchema, defaultConfig } from './config/schema';
 import { existsSync } from 'fs';
 import path from 'path';
 import { VERSION, DEFAULT_USER_AGENT } from './version';

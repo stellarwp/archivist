@@ -1,5 +1,5 @@
 import { singleton } from 'tsyringe';
-import type { ArchivistConfig } from '../../archivist.config';
+import type { ArchivistConfig } from '../config/schema';
 import { resolvePureApiKey } from '../utils/pure-api-key';
 
 /**

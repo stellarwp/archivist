@@ -1,4 +1,4 @@
-import type { ArchivistConfig, Archive, Source } from '../archivist.config';
+import type { ArchivistConfig, Archive, Source } from './config/schema';
 import { PureMdClient } from './services/pure-md';
 import { LinkDiscoverer } from './services/link-discoverer';
 import { parseMarkdownContent } from './utils/markdown-parser';
