@@ -36,7 +36,7 @@ export { getAxiosConfig } from './utils/axios-config';
 
 // Export types
 export type { StrategyResult, SourceStrategyType } from './types/source-strategy';
-export type { ArchivistConfig, ArchiveConfig, SourceConfig, OutputConfig, CrawlConfig, PaginationConfig } from '../archivist.config';
+export type { ArchivistConfig, ArchiveConfig, SourceConfig, OutputConfig, CrawlConfig, PaginationConfig } from './config/schema';
 
 // Export existing functionality for backward compatibility
 export { WebCrawler } from './crawler';
