@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { describe, expect, it, beforeEach, afterEach, mock } from 'bun:test';
+import { describe, expect, it, beforeEach, afterEach, mock, spyOn } from 'bun:test';
 import { PaginationStrategy } from '../../../src/strategies/pagination-strategy';
 import axios from 'axios';
 import { initializeContainer, resetContainer } from '../../../src/di/container';
@@ -11,8 +11,11 @@ const originalCreate = axios.create;
 
 describe('PaginationStrategy 404 Handling', () => {
   let strategy: PaginationStrategy;
+  let consoleErrorSpy: any;
   
   beforeEach(() => {
+    // Suppress console.error for expected errors
+    consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => {});
     // Don't mock extractLinksFromPage globally - it affects other tests
     // Mock axios.create to return a mock instance with proper HTML
     const mockAxiosInstance = {
@@ -56,6 +59,8 @@ describe('PaginationStrategy 404 Handling', () => {
     axios.create = originalCreate;
     // Reset DI container
     resetContainer();
+    // Restore console.error
+    consoleErrorSpy?.mockRestore();
   });
   
   it('should stop pagination when encountering 404 after retry', async () => {
