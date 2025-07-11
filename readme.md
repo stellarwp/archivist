@@ -159,18 +159,11 @@ archivist crawl
         "fileNaming": "url-based"
       }
     }
-  ],
-  "crawl": {
-    "maxConcurrency": 3,
-    "delay": 1000,
-    "userAgent": "Archivist/0.1.0-beta.6",
-    "timeout": 30000
-  },
-  "pure": {
-    "apiKey": "your-api-key-here"
-  }
+  ]
 }
 ```
+
+Note: The `crawl` and `pure` sections are optional. If not specified, sensible defaults will be used.
 
 ### Configuration Options
 
@@ -198,14 +191,15 @@ Sources can be:
 - **format** - Output format: `markdown`, `html`, or `json`
 - **fileNaming** - Naming strategy: `url-based`, `title-based`, or `hash-based`
 
-#### Crawl (global settings)
-- **maxConcurrency** - Maximum parallel requests
-- **delay** - Delay between requests in milliseconds
-- **userAgent** - User agent string for requests
-- **timeout** - Request timeout in milliseconds
+#### Crawl (optional global settings)
+- **maxConcurrency** - Maximum parallel requests (default: 3)
+- **delay** - Delay between requests in milliseconds (default: 1000)
+- **userAgent** - User agent string for requests (default: "Archivist/[version]")
+- **timeout** - Request timeout in milliseconds (default: 30000)
+- **debug** - Enable debug logging (default: false)
 
-#### Pure (global settings)
-- **apiKey** - Your Pure.md API key
+#### Pure (optional global settings)
+- **apiKey** - Your Pure.md API key (can also be set via PURE_API_KEY environment variable)
 
 ## Usage Examples
 
@@ -228,11 +222,7 @@ For more complete examples, check out the [examples directory](./examples/).
         "fileNaming": "title-based"
       }
     }
-  ],
-  "crawl": {
-    "maxConcurrency": 3,
-    "delay": 1000
-  }
+  ]
 }
 ```
 
@@ -262,11 +252,7 @@ For more complete examples, check out the [examples directory](./examples/).
         "fileNaming": "title-based"
       }
     }
-  ],
-  "crawl": {
-    "maxConcurrency": 5,
-    "delay": 500
-  }
+  ]
 }
 ```
 
@@ -891,11 +877,8 @@ configService.initialize({
       directory: "./output",
       format: "markdown"
     }
-  }],
-  crawl: {
-    maxConcurrency: 3,
-    delay: 1000
-  }
+  }]
+  // crawl section is optional - defaults will be used
 });
 
 // Collect URLs first

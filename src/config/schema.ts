@@ -68,7 +68,7 @@ export type PaginationConfig = z.infer<typeof PaginationConfigSchema>;
 
 export const ArchivistConfigSchema = z.object({
   archives: z.array(ArchiveSchema),
-  crawl: CrawlConfigSchema,
+  crawl: CrawlConfigSchema.optional(),
   pure: z.object({
     apiKey: z.string().optional(),
   }).optional(),
@@ -78,12 +78,14 @@ export type ArchivistConfig = z.infer<typeof ArchivistConfigSchema>;
 export type Archive = z.infer<typeof ArchiveSchema>;
 export type Source = z.infer<typeof SourceSchema>;
 
+export const defaultCrawlConfig: CrawlConfig = {
+  maxConcurrency: 3,
+  delay: 1000,
+  userAgent: DEFAULT_USER_AGENT,
+  timeout: 30000,
+};
+
 export const defaultConfig: ArchivistConfig = {
   archives: [],
-  crawl: {
-    maxConcurrency: 3,
-    delay: 1000,
-    userAgent: DEFAULT_USER_AGENT,
-    timeout: 30000,
-  },
+  crawl: defaultCrawlConfig,
 };

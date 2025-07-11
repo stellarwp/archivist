@@ -9,9 +9,5 @@
         "fileNaming": "title-based"
       }
     }
-  ],
-  "crawl": {
-    "maxConcurrency": 1,
-    "delay": 1000
-  }
+  ]
 }
