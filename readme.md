@@ -539,8 +539,88 @@ Use when pages have "Next" or "Older Posts" links:
 - **startPage** - First page number (default: 1)
 - **maxPages** - Maximum pages to crawl (default: 10 for patterns, 50 for next links)
 - **nextLinkSelector** - CSS selector for finding next page links
+- **stopConditions** - Smart stopping conditions to prevent endless crawling (optional)
+
+### Smart Pagination Stopping
+
+Archivist includes intelligent pagination stopping to prevent endless crawling of paginated content. It automatically detects when to stop based on multiple conditions:
+
+#### Stop Conditions Configuration
+
+```json
+{
+  "pagination": {
+    "pagePattern": "https://blog.example.com/page/{page}",
+    "maxPages": 50,
+    "stopConditions": {
+      "consecutiveEmptyPages": 3,
+      "max404Errors": 2,
+      "minNewLinksPerPage": 1,
+      "errorKeywords": [
+        "page not found",
+        "no posts found",
+        "end of archive"
+      ]
+    }
+  }
+}
+```
+
+#### Stop Condition Options
+
+- **consecutiveEmptyPages** - Stop after N consecutive pages with no new links (default: 3)
+- **max404Errors** - Stop after encountering N 404 errors (default: 2)
+- **minNewLinksPerPage** - Minimum new links required per page to continue (default: 1)
+- **errorKeywords** - Array of keywords that indicate error pages (case-insensitive)
+
+#### Default Behavior
+
+Even without explicit configuration, Archivist will automatically stop pagination when it detects:
+- 3 consecutive pages with no new links
+- 2 or more 404 errors
+- Pages containing common error terminology
+- Significant decline in new links discovered
+
+This prevents the crawler from endlessly trying non-existent pages or continuing past the end of content.
 
 ### Complete Examples
+
+#### Blog with Smart Pagination Stopping
+
+```json
+{
+  "archives": [{
+    "name": "Tech Blog Archive",
+    "sources": {
+      "url": "https://techblog.example.com",
+      "strategy": "pagination",
+      "linkSelector": "article h2 a, .post-title a",
+      "pagination": {
+        "pagePattern": "https://techblog.example.com/page/{page}",
+        "startPage": 1,
+        "maxPages": 100,
+        "stopConditions": {
+          "consecutiveEmptyPages": 3,
+          "max404Errors": 2,
+          "minNewLinksPerPage": 2,
+          "errorKeywords": ["no articles found", "page not available"]
+        }
+      }
+    },
+    "output": {
+      "directory": "./archive/tech-blog",
+      "format": "markdown"
+    }
+  }]
+}
+```
+
+This configuration will:
+- Start at page 1 and crawl up to 100 pages maximum
+- Stop if 3 consecutive pages have fewer than 2 new links each
+- Stop if 2 pages return 404 errors
+- Stop if a page contains "no articles found" or "page not available"
+- Extract links from article titles and post title elements
 
 #### Blog with Numbered Pages
 

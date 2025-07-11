@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-07-11T04:58:19.705Z",
+  "summary": {
+    "totalArchives": 1,
+    "totalUrls": 0,
+    "paginationStats": {
+      "totalPages": 1,
+      "totalLinks": 0
+    }
+  },
+  "archives": [
+    {
+      "archive": "Pagination Stop Test",
+      "source": "https://httpbin.org/status/200",
+      "strategy": "pagination",
+      "paginationPages": 1,
+      "urlCount": 0,
+      "urls": []
+    }
+  ]
+}

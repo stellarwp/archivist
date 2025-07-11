@@ -51,12 +51,20 @@ const CrawlConfigSchema = z.object({
   debug: z.boolean().default(false).optional(),
 });
 
+const PaginationStopConditionsSchema = z.object({
+  consecutiveEmptyPages: z.number().min(1).default(3).optional().describe('Stop after N pages with no new links'),
+  max404Errors: z.number().min(1).default(2).optional().describe('Stop after N 404 errors'),
+  errorKeywords: z.array(z.string()).optional().describe('Keywords indicating error pages'),
+  minNewLinksPerPage: z.number().min(0).default(1).optional().describe('Minimum new links to continue'),
+}).optional();
+
 const PaginationConfigSchema = z.object({
   startPage: z.number().default(1).optional(),
   maxPages: z.number().optional(),
   pageParam: z.string().default('page').optional(),
   pagePattern: z.string().optional().describe('Pattern for page URLs, e.g., "example.com/page/{page}"'),
   nextLinkSelector: z.string().optional().describe('CSS selector for next page link'),
+  stopConditions: PaginationStopConditionsSchema.describe('Conditions for early pagination stopping'),
 });
 
 // Export types
@@ -65,6 +73,7 @@ export type ArchiveConfig = z.infer<typeof ArchiveSchema>;
 export type OutputConfig = z.infer<typeof OutputSchema>;
 export type CrawlConfig = z.infer<typeof CrawlConfigSchema>;
 export type PaginationConfig = z.infer<typeof PaginationConfigSchema>;
+export type PaginationStopConditions = z.infer<typeof PaginationStopConditionsSchema>;
 
 export const ArchivistConfigSchema = z.object({
   archives: z.array(ArchiveSchema),
