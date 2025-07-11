@@ -89,10 +89,9 @@ describe('PaginationStrategy 404 Handling', () => {
     
     const result = await strategy.execute('https://example.com', config);
     
-    // Should have extracted links from base URL + pages 1, 2, 3 (stops at 4 due to 404)
-    // Each page has one link, so we should have 4 unique links
-    expect(result.urls).toHaveLength(4);
-    expect(result.urls).toContain('https://example.com/article-0'); // from base URL
+    // Should have extracted links from pages 1, 2, 3 (stops at 4 due to 404)
+    // Pattern-based pagination doesn't process the base URL
+    expect(result.urls).toHaveLength(3);
     expect(result.urls).toContain('https://example.com/article-1'); // from page 1
     expect(result.urls).toContain('https://example.com/article-2'); // from page 2
     expect(result.urls).toContain('https://example.com/article-3'); // from page 3
@@ -127,8 +126,8 @@ describe('PaginationStrategy 404 Handling', () => {
     
     const result = await strategy.execute('https://example.com', config);
     
-    // Should have extracted links from all pages since page 4 succeeded on retry
-    expect(result.urls).toHaveLength(5); // 5 unique links from 5 pages
+    // Should have extracted links from pages 1-4 since page 4 succeeded on retry
+    expect(result.urls).toHaveLength(4);
     expect(result.urls).toContain('https://example.com/article-4'); // from page 4
     expect(page4Attempts).toBe(2); // Should have retried once
   });
@@ -155,9 +154,8 @@ describe('PaginationStrategy 404 Handling', () => {
     
     const result = await strategy.execute('https://example.com', config);
     
-    // Should have extracted links from base + pages 1, 2 (stops at page 3)
-    expect(result.urls).toHaveLength(3); // 3 unique links
-    expect(result.urls).toContain('https://example.com/article-0'); // from base
+    // Should have extracted links from pages 1, 2 (stops at page 3 due to 404)
+    expect(result.urls).toHaveLength(2);
     expect(result.urls).toContain('https://example.com/article-1'); // from page 1
     expect(result.urls).toContain('https://example.com/article-2'); // from page 2
   });
