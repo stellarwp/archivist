@@ -106,15 +106,18 @@ const mockResponses: Record<string, string> = {
 
 describe('link-extractor', () => {
   beforeEach(() => {
-    // Mock the LinkDiscoverer in the DI container
-    appContainer.register(LinkDiscoverer, {
-      useValue: mockLinkDiscoverer,
-    });
+    // Clear existing instances
+    appContainer.clearInstances();
+    
+    // Register the mock as an instance
+    appContainer.registerInstance(LinkDiscoverer, mockLinkDiscoverer as any);
   });
 
   afterEach(() => {
     // Clear all mocks
     mock.restore();
+    // Clear container instances
+    appContainer.clearInstances();
   });
 
   describe('extractLinksFromPage', () => {
