@@ -64,7 +64,7 @@ describe('CLI Commands', () => {
     });
 
     it('should handle crawl with example config gracefully', async () => {
-      // Create a custom config with shorter timeout
+      // Create a custom config with dry-run to avoid actual network calls
       const configPath = join(testDir, 'archivist.config.json');
       const config = {
         archives: [{
@@ -84,8 +84,8 @@ describe('CLI Commands', () => {
       };
       await Bun.write(configPath, JSON.stringify(config, null, 2));
       
-      // Run crawl - it will try to fetch example.com URLs
-      const result = await $`bun ${cliPath} crawl`.quiet().nothrow();
+      // Run crawl with --dry-run to avoid actual network calls
+      const result = await $`bun ${cliPath} crawl --dry-run --no-confirm`.quiet().nothrow();
       
       // The crawl should complete (exit code 0) even if URLs fail
       // The crawler is designed to continue despite individual URL failures
@@ -104,7 +104,7 @@ describe('CLI Commands', () => {
       const config = {
         archives: [{
           name: "Test Archive",
-          sources: ["https://example.com"],
+          sources: ["http://localhost:9999/test"], // Use localhost to avoid external calls
           output: {
             directory: "./test-output",
             format: "markdown",
